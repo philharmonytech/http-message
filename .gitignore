@@ -1,0 +1,35 @@
+# Build & coverage
+/build
+/coverage
+/coverage.xml
+/coverage.txt
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Dependencies
+/vendor
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# PHP tools cache
+.phpstan/cache
+.php_cs.cache
+
+# IDE
+/.idea
+/.vscode
+*.swp
+*.swo
+
+# Caches
+.phpstan/cache/
+.php-cs-fixer.cache
+coverage/
+docs/
