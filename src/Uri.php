@@ -4,60 +4,38 @@ declare(strict_types=1);
 
 namespace Philharmony\Http\Message;
 
+use Philharmony\Http\Enum\Scheme;
 use Psr\Http\Message\UriInterface;
 
 class Uri implements UriInterface
 {
-    private const HTTP = 'http';
-    private const HTTPS = 'https';
     private const DEFAULT_HOST = 'localhost';
-
-    private const FTP = 'ftp';
-    private const WS = 'ws';
-    private const WSS = 'wss';
-
-    private const DEFAULT_PORTS = [
-        self::HTTP => 80,
-        self::HTTPS => 443,
-        self::FTP => 21,
-        self::WS => 80,
-        self::WSS => 443,
-    ];
-
-    private const SCHEMES_REQUIRE_DEFAULT_HOST = [
-        self::HTTP,
-        self::HTTPS,
-        self::FTP,
-        self::WS,
-        self::WSS
-    ];
 
     private string $scheme = '';
     private string $user = '';
     private string $password = '';
     private string $host = '';
     private ?int $port = null;
-    private string $path = '/';
+    private string $path = '';
     private string $query = '';
     private string $fragment = '';
 
     public function __construct(string $uri = '')
     {
-        if (!empty($uri)) {
+        if ($uri !== '') {
             $this->parseUri($uri);
-        } else {
-            $this->scheme = self::HTTP;
-            $this->ensureDefaultHost();
-            $this->ensureDefaultPort();
         }
     }
 
-    public static function create(string $uri = ''): UriInterface
+    public static function create(string $uri = ''): self
     {
         return new self($uri);
     }
 
-    public static function fromParts(array $parts): UriInterface
+    /**
+     * @param array<string, mixed> $parts
+     */
+    public static function fromParts(array $parts): self
     {
         $uri = new self();
         $uri->applyParts($parts);
@@ -75,8 +53,8 @@ class Uri implements UriInterface
         $this->validateScheme($scheme);
         $clone = clone $this;
         $clone->scheme = strtolower($scheme);
+
         $clone->ensureDefaultHost();
-        $clone->ensureDefaultPort();
 
         return $clone;
     }
@@ -95,13 +73,12 @@ class Uri implements UriInterface
         }
 
         $port = $this->getPort();
-        if ($port !== null && !$this->isStandardPort()) {
+        if ($port !== null) {
             $authority .= ':' . $port;
         }
 
         return $authority;
     }
-
 
     public function getUserInfo(): string
     {
@@ -135,14 +112,13 @@ class Uri implements UriInterface
     {
         $clone = clone $this;
         $clone->host = strtolower($host);
-        $clone->ensureDefaultPort();
 
         return $clone;
     }
 
     public function getPort(): ?int
     {
-        return $this->port;
+        return $this->isStandardPort() ? null : $this->port;
     }
 
     public function withPort(?int $port): UriInterface
@@ -154,6 +130,11 @@ class Uri implements UriInterface
         return $clone;
     }
 
+    public function getExplicitPort(): ?int
+    {
+        return $this->port;
+    }
+
     public function getPath(): string
     {
         return $this->path;
@@ -161,15 +142,8 @@ class Uri implements UriInterface
 
     public function withPath(string $path): UriInterface
     {
-        $normalizedPath = preg_replace('/\/+/', '/', $path);
-        if ($normalizedPath === '') {
-            $normalizedPath = '/';
-        } elseif (!str_starts_with($normalizedPath, '/')) {
-            $normalizedPath = '/' . $normalizedPath;
-        }
-
         $clone = clone $this;
-        $clone->path = $normalizedPath;
+        $clone->path = $this->filterComponent($path, '/@');
 
         return $clone;
     }
@@ -183,7 +157,7 @@ class Uri implements UriInterface
     {
         $query = ltrim($query, '?');
         $clone = clone $this;
-        $clone->query = $query;
+        $clone->query = $this->filterComponent($query, '/?@');
 
         return $clone;
     }
@@ -197,7 +171,7 @@ class Uri implements UriInterface
     {
         $fragment = ltrim($fragment, '#');
         $clone = clone $this;
-        $clone->fragment = $fragment;
+        $clone->fragment = $this->filterComponent($fragment, '/?@');
 
         return $clone;
     }
@@ -215,10 +189,19 @@ class Uri implements UriInterface
             $uri .= '//' . $authority;
         }
 
-        if ($uri === '' && !str_starts_with($this->path, '/')) {
-            $uri .= '/';
+        $path = $this->getPath();
+
+        if ($authority !== '') {
+            if ($path !== '' && $path[0] !== '/') {
+                $path = '/' . $path;
+            }
+        } else {
+            if (str_starts_with($path, '//')) {
+                $path = '/' . ltrim($path, '/');
+            }
         }
-        $uri .= $this->path;
+
+        $uri .= $path;
 
         if ($this->query !== '') {
             $uri .= '?' . $this->query;
@@ -233,10 +216,6 @@ class Uri implements UriInterface
 
     private function parseUri(string $uri): void
     {
-        if (empty($uri)) {
-            return;
-        }
-
         $parts = parse_url($uri);
         if ($parts === false) {
             throw new \InvalidArgumentException(sprintf('Invalid URI: %s', $uri));
@@ -245,32 +224,35 @@ class Uri implements UriInterface
         $this->applyParts($parts);
     }
 
+    /**
+     * @param array<string, mixed> $parts
+     */
     private function applyParts(array $parts = []): void
     {
-        $this->scheme = $parts['scheme'] ?? '';
+        $this->scheme = is_string($parts['scheme'] ?? null) ? $parts['scheme'] : '';
         if ($this->scheme !== '') {
             $this->validateScheme($this->scheme);
             $this->scheme = strtolower($this->scheme);
         }
 
-        $this->host = $parts['host'] ?? '';
+        $this->host = is_string($parts['host'] ?? null) ? $parts['host'] : '';
 
-        $port = isset($parts['port']) ? (int)$parts['port'] : null;
+        $port = (is_int($parts['port'] ?? null) || is_numeric($parts['port'] ?? null))
+            ? (int)$parts['port']
+            : null;
         if ($port !== null) {
             $this->validatePorts($port);
         }
         $this->port = $port;
 
-        $this->path = $parts['path'] ?? '/';
-        $this->query = $parts['query'] ?? '';
-        $this->fragment = $parts['fragment'] ?? '';
-        $this->user = $parts['user'] ?? '';
-        $this->password = $parts['pass'] ?? '';
+        $this->path = is_string($parts['path'] ?? null) ? $this->filterComponent($parts['path'], '/@') : '';
+        $this->query = is_string($parts['query'] ?? null) ? $this->filterComponent($parts['query'], '/?@') : '';
+        $this->fragment = is_string($parts['fragment'] ?? null) ? $this->filterComponent($parts['fragment'], '/?@') : '';
+        $this->user = is_string($parts['user'] ?? null) ? $parts['user'] : '';
+        $this->password = is_string($parts['pass'] ?? null) ? $parts['pass'] : '';
 
         $this->ensureDefaultHost();
-        $this->ensureDefaultPort();
     }
-
 
     private function validateScheme(string $scheme): void
     {
@@ -286,43 +268,37 @@ class Uri implements UriInterface
         }
     }
 
-    private function requiresDefaultHost(): bool
-    {
-        return in_array($this->scheme, self::SCHEMES_REQUIRE_DEFAULT_HOST, true);
-    }
-
-    private function getDefaultPort(): ?int
-    {
-        if ($this->port !== null) {
-            return $this->port;
-        }
-
-        return self::DEFAULT_PORTS[$this->scheme] ?? null;
-    }
-
     private function isStandardPort(): bool
     {
         if ($this->port === null || $this->scheme === '') {
             return true;
         }
 
-        $standardPort = self::DEFAULT_PORTS[$this->scheme] ?? null;
+        $schemeEnum = Scheme::tryFrom($this->scheme);
+        if ($schemeEnum === null) {
+            return false;
+        }
 
-        return $standardPort !== null && $this->port === $standardPort;
+        return $this->port === $schemeEnum->defaultPort();
     }
 
     private function ensureDefaultHost(): void
     {
-        if ($this->host === '' && $this->requiresDefaultHost()) {
+        $schemeEnum = Scheme::tryFrom($this->scheme);
+
+        if ($this->host === '' && $schemeEnum?->requiresHost()) {
             $this->host = self::DEFAULT_HOST;
         }
     }
 
-    private function ensureDefaultPort(): void
+    private function filterComponent(string $value, string $additionalAllowed = ''): string
     {
-        $defaultPort = $this->getDefaultPort();
-        if ($defaultPort !== null && $this->port === null) {
-            $this->port = $defaultPort;
-        }
+        $result = preg_replace_callback(
+            '/(?:[^a-zA-Z0-9_\-\.~!\$&\'\(\)\*\+,;=%:' . preg_quote($additionalAllowed, '/') . ']++|%(?![A-Fa-f0-9]{2}))/',
+            static fn (array $matches): string => rawurlencode((string)$matches[0]),
+            $value
+        );
+
+        return (string) $result;
     }
 }
