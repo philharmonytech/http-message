@@ -218,7 +218,7 @@ class Uri implements UriInterface
     {
         $parts = parse_url($uri);
         if ($parts === false) {
-            throw new \InvalidArgumentException(sprintf('Invalid URI: %s', $uri));
+            throw new \InvalidArgumentException(\sprintf('Invalid URI: %s', $uri));
         }
 
         $this->applyParts($parts);
@@ -229,15 +229,15 @@ class Uri implements UriInterface
      */
     private function applyParts(array $parts = []): void
     {
-        $this->scheme = is_string($parts['scheme'] ?? null) ? $parts['scheme'] : '';
+        $this->scheme = \is_string($parts['scheme'] ?? null) ? $parts['scheme'] : '';
         if ($this->scheme !== '') {
             $this->validateScheme($this->scheme);
             $this->scheme = strtolower($this->scheme);
         }
 
-        $this->host = is_string($parts['host'] ?? null) ? $parts['host'] : '';
+        $this->host = \is_string($parts['host'] ?? null) ? $parts['host'] : '';
 
-        $port = (is_int($parts['port'] ?? null) || is_numeric($parts['port'] ?? null))
+        $port = (\is_int($parts['port'] ?? null) || is_numeric($parts['port'] ?? null))
             ? (int)$parts['port']
             : null;
         if ($port !== null) {
@@ -245,11 +245,11 @@ class Uri implements UriInterface
         }
         $this->port = $port;
 
-        $this->path = is_string($parts['path'] ?? null) ? $this->filterComponent($parts['path'], '/@') : '';
-        $this->query = is_string($parts['query'] ?? null) ? $this->filterComponent($parts['query'], '/?@') : '';
-        $this->fragment = is_string($parts['fragment'] ?? null) ? $this->filterComponent($parts['fragment'], '/?@') : '';
-        $this->user = is_string($parts['user'] ?? null) ? $parts['user'] : '';
-        $this->password = is_string($parts['pass'] ?? null) ? $parts['pass'] : '';
+        $this->path = \is_string($parts['path'] ?? null) ? $this->filterComponent($parts['path'], '/@') : '';
+        $this->query = \is_string($parts['query'] ?? null) ? $this->filterComponent($parts['query'], '/?@') : '';
+        $this->fragment = \is_string($parts['fragment'] ?? null) ? $this->filterComponent($parts['fragment'], '/?@') : '';
+        $this->user = \is_string($parts['user'] ?? null) ? $parts['user'] : '';
+        $this->password = \is_string($parts['pass'] ?? null) ? $parts['pass'] : '';
 
         $this->ensureDefaultHost();
     }
@@ -257,14 +257,14 @@ class Uri implements UriInterface
     private function validateScheme(string $scheme): void
     {
         if ($scheme !== '' && !preg_match('/^[a-zA-Z][a-zA-Z0-9+.-]*$/', $scheme)) {
-            throw new \InvalidArgumentException(sprintf('Invalid scheme: %s', $scheme));
+            throw new \InvalidArgumentException(\sprintf('Invalid scheme: %s', $scheme));
         }
     }
 
     private function validatePorts(?int $port): void
     {
         if ($port !== null && ($port < 1 || $port > 65535)) {
-            throw new \InvalidArgumentException(sprintf('Invalid port: %d', $port));
+            throw new \InvalidArgumentException(\sprintf('Invalid port: %d', $port));
         }
     }
 

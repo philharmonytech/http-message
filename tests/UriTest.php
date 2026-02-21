@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Philharmony\Http\Message\Tests;
 
+use Philharmony\Http\Message\Uri;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Philharmony\Http\Message\Uri;
 
 class UriTest extends TestCase
 {
