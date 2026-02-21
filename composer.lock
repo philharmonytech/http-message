@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "philharmony/http-enum",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/philharmonytech/http-enum.git",
-                "reference": "5e272943cb74236f06ae4fccfc8ec416725a2d4c"
+                "reference": "984c7fe699faa204a75299d924f246e8abb678d2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/philharmonytech/http-enum/zipball/5e272943cb74236f06ae4fccfc8ec416725a2d4c",
-                "reference": "5e272943cb74236f06ae4fccfc8ec416725a2d4c",
+                "url": "https://api.github.com/repos/philharmonytech/http-enum/zipball/984c7fe699faa204a75299d924f246e8abb678d2",
+                "reference": "984c7fe699faa204a75299d924f246e8abb678d2",
                 "shasum": ""
             },
             "require": {
@@ -57,9 +57,9 @@
             ],
             "support": {
                 "issues": "https://github.com/philharmonytech/http-enum/issues",
-                "source": "https://github.com/philharmonytech/http-enum/tree/v1.0.0"
+                "source": "https://github.com/philharmonytech/http-enum/tree/v1.1.0"
             },
-            "time": "2026-02-16T13:30:36+00:00"
+            "time": "2026-02-20T12:39:38+00:00"
         },
         {
             "name": "psr/http-message",
