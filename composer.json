@@ -4,7 +4,10 @@
   "type": "library",
   "license": "MIT",
   "keywords": [
+    "psr",
+    "psr-7",
     "http",
+    "http-message",
     "request",
     "response",
     "stream",

@@ -1,0 +1,30 @@
+name: Static Analysis
+
+on:
+  workflow_run:
+    workflows: [Validate Code]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  phpstan:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+      - run: composer install --no-progress
+      - run: composer phpstan
+
+  cs-check:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+      - run: composer install --no-progress
+      - run: composer cs-check
