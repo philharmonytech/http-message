@@ -1,12 +1,13 @@
 # philharmony/http-message
 
-[![Validate](https://github.com)](https://github.com)
-[![Analysis](https://github.com/workflows/ci-analysis.yml/badge.svg)](https://github.com)
-[![Test](https://github.com/workflows/ci-test.yml/badge.svg)](https://github.com)
-[![codecov](https://codecov.io)](https://codecov.io)
+[![Validate](https://github.com/philharmonytech/http-message/actions/workflows/ci-validate.yml/badge.svg)](https://github.com/philharmonytech/http-message/actions/workflows/ci-validate.yml)
+[![Analysis](https://github.com/philharmonytech/http-message/actions/workflows/ci-analysis.yml/badge.svg)](https://github.com/philharmonytech/http-message/actions/workflows/ci-analysis.yml)
+[![Test](https://github.com/philharmonytech/http-message/actions/workflows/ci-test.yml/badge.svg)](https://github.com/philharmonytech/http-message/actions/workflows/ci-test.yml)
+[![codecov](https://codecov.io/github/philharmonytech/http-message/graph/badge.svg?token=JVGM1RRACK)](https://codecov.io/github/philharmonytech/http-message)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%20to%208.4-8892BF.svg)](https://www.php.net/supported-versions.php)
-[![Latest Stable Version](https://img.shields.io)](https://github.com)
-[![License](https://img.shields.io)](https://github.com)
+[![Latest Stable Version](https://img.shields.io/github/v/release/philharmonytech/http-message?label=stable)](https://github.com/philharmonytech/http-message/releases)
+[![Total Downloads](https://img.shields.io/packagist/dt/philharmony/http-message)](https://packagist.org/packages/philharmony/http-message)
+[![License](https://img.shields.io/packagist/l/philharmony/http-message)](https://github.com/philharmonytech/http-message/blob/main/LICENSE)
 
 Strict, type-safe PSR-7 URI implementation for PHP. Designed for maximum security, immutability, and seamless integration with modern PHP ecosystems.
 
