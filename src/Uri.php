@@ -27,7 +27,7 @@ class Uri implements UriInterface
         }
     }
 
-    public static function create(string $uri = ''): self
+    public static function create(string $uri = ''): static
     {
         return new self($uri);
     }
@@ -35,7 +35,7 @@ class Uri implements UriInterface
     /**
      * @param array<string, mixed> $parts
      */
-    public static function fromParts(array $parts): self
+    public static function fromParts(array $parts): static
     {
         $uri = new self();
         $uri->applyParts($parts);
@@ -48,7 +48,7 @@ class Uri implements UriInterface
         return $this->scheme;
     }
 
-    public function withScheme(string $scheme): UriInterface
+    public function withScheme(string $scheme): static
     {
         $this->validateScheme($scheme);
         $clone = clone $this;
@@ -94,7 +94,7 @@ class Uri implements UriInterface
         return $userInfo;
     }
 
-    public function withUserInfo(string $user, ?string $password = null): UriInterface
+    public function withUserInfo(string $user, ?string $password = null): static
     {
         $clone = clone $this;
         $clone->user = $user;
@@ -108,7 +108,7 @@ class Uri implements UriInterface
         return $this->host;
     }
 
-    public function withHost(string $host): UriInterface
+    public function withHost(string $host): static
     {
         $clone = clone $this;
         $clone->host = strtolower($host);
@@ -121,7 +121,7 @@ class Uri implements UriInterface
         return $this->isStandardPort() ? null : $this->port;
     }
 
-    public function withPort(?int $port): UriInterface
+    public function withPort(?int $port): static
     {
         $this->validatePorts($port);
         $clone = clone $this;
@@ -140,7 +140,7 @@ class Uri implements UriInterface
         return $this->path;
     }
 
-    public function withPath(string $path): UriInterface
+    public function withPath(string $path): static
     {
         $clone = clone $this;
         $clone->path = $this->filterComponent($path, '/@');
@@ -153,7 +153,7 @@ class Uri implements UriInterface
         return $this->query;
     }
 
-    public function withQuery(string $query): UriInterface
+    public function withQuery(string $query): static
     {
         $query = ltrim($query, '?');
         $clone = clone $this;
@@ -167,7 +167,7 @@ class Uri implements UriInterface
         return $this->fragment;
     }
 
-    public function withFragment(string $fragment): UriInterface
+    public function withFragment(string $fragment): static
     {
         $fragment = ltrim($fragment, '#');
         $clone = clone $this;
