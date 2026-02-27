@@ -13,7 +13,7 @@ Strict, type-safe PSR-7 HTTP Message implementation for PHP. Designed for maximu
 
 ## 📖 Description
 
-`philharmony/http-message` provides a robust implementation of the **PSR-7 `UriInterface`**. It focuses on:
+`philharmony/http-message` provides a robust, high-performance implementation of the **PSR-7 HTTP Message interfaces**. This package serves as the foundational messaging layer for the Philharmony framework, focusing on:
 
 - **Full PSR-7 Compliance** — Interchangeable with any PSR-compliant library.
 - **Strict Typing** — Verified with **PHPStan Level 9** for rock-solid reliability.
