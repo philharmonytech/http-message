@@ -27,7 +27,7 @@ class Uri implements UriInterface
         }
     }
 
-    public static function create(string $uri = ''): static
+    public static function create(string $uri = ''): self
     {
         return new self($uri);
     }
@@ -35,7 +35,7 @@ class Uri implements UriInterface
     /**
      * @param array<string, mixed> $parts
      */
-    public static function fromParts(array $parts): static
+    public static function fromParts(array $parts): self
     {
         $uri = new self();
         $uri->applyParts($parts);
