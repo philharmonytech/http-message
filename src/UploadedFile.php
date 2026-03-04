@@ -160,7 +160,7 @@ class UploadedFile implements UploadedFileInterface
     private function moveFile(string $source, string $target): bool
     {
         return PHP_SAPI === 'cli'
-            ? @\rename($source, $target)
-            : @\move_uploaded_file($source, $target);
+            ? @rename($source, $target)
+            : @move_uploaded_file($source, $target);
     }
 }

@@ -9,25 +9,20 @@ use Philharmony\Http\Message\Stream;
 use Philharmony\Http\Message\UploadedFile;
 use PHPUnit\Framework\TestCase;
 
-function move_uploaded_file(string $filename, string $destination): bool {
-    // В тестах мы просто имитируем успех через rename
-    return \rename($filename, $destination);
-}
-
 class UploadedFileTest extends TestCase
 {
     private string $tempFile;
 
     protected function setUp(): void
     {
-        $this->tempFile = \tempnam(\sys_get_temp_dir(), 'philharmony_test');
-        \file_put_contents($this->tempFile, 'content');
+        $this->tempFile = tempnam(sys_get_temp_dir(), 'philharmony_test');
+        file_put_contents($this->tempFile, 'content');
     }
 
     protected function tearDown(): void
     {
-        if (\file_exists($this->tempFile)) {
-            \unlink($this->tempFile);
+        if (file_exists($this->tempFile)) {
+            unlink($this->tempFile);
         }
     }
 
@@ -80,10 +75,10 @@ class UploadedFileTest extends TestCase
 
         $uploadedFile->moveTo($target);
 
-        $this->assertTrue(\file_exists($target));
-        $this->assertFalse(\file_exists($this->tempFile));
+        $this->assertTrue(file_exists($target));
+        $this->assertFalse(file_exists($this->tempFile));
 
-        \unlink($target);
+        unlink($target);
     }
 
     public function testMoveToFromStream(): void
@@ -94,10 +89,10 @@ class UploadedFileTest extends TestCase
 
         $uploadedFile->moveTo($target);
 
-        $this->assertTrue(\file_exists($target));
-        $this->assertSame('stream content', \file_get_contents($target));
+        $this->assertTrue(file_exists($target));
+        $this->assertSame('stream content', file_get_contents($target));
 
-        \unlink($target);
+        unlink($target);
     }
 
     public function testThrowsOnInvalidTargetPath(): void
@@ -134,7 +129,7 @@ class UploadedFileTest extends TestCase
     public function testGetStreamThrowsExceptionIfFileCannotBeOpened(): void
     {
 
-        $invalidFile = \sys_get_temp_dir() . '/non_existent_' . uniqid();
+        $invalidFile = sys_get_temp_dir() . '/non_existent_' . uniqid();
 
         $upload = UploadedFile::create($invalidFile, 10, UPLOAD_ERR_OK);
 
@@ -149,7 +144,7 @@ class UploadedFileTest extends TestCase
         $stream = Stream::create('some content');
         $upload = UploadedFile::create($stream, 12, UPLOAD_ERR_OK);
 
-        $invalidTarget = '/non/existent/directory/structure/' . \uniqid('test_');
+        $invalidTarget = '/non/existent/directory/structure/' . uniqid('test_');
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage("Unable to write to path \"$invalidTarget\"");
@@ -159,17 +154,17 @@ class UploadedFileTest extends TestCase
 
     public function testMoveToThrowsExceptionIfRenameFails(): void
     {
-        $sourceFile = \tempnam(\sys_get_temp_dir(), 'source_');
-        \file_put_contents($sourceFile, 'data');
+        $sourceFile = tempnam(sys_get_temp_dir(), 'source_');
+        file_put_contents($sourceFile, 'data');
 
         $upload = new UploadedFile($sourceFile, 4, UPLOAD_ERR_OK);
-        $invalidTarget = '/non/existent/path/' . \uniqid('phil_');
+        $invalidTarget = '/non/existent/path/' . uniqid('phil_');
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Uploaded file could not be moved to');
         $upload->moveTo($invalidTarget);
-        if (\file_exists($sourceFile)) {
-            @\unlink($sourceFile);
+        if (file_exists($sourceFile)) {
+            @unlink($sourceFile);
         }
     }
 }
