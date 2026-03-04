@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 class UriTest extends TestCase
 {
     #[DataProvider('getUriDataProvider')]
-    public function testUriConstruct(
+    public function testCreateUri(
         string $uri,
         array $expectedDataUri
     ): void {
