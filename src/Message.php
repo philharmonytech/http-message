@@ -172,7 +172,7 @@ abstract class Message implements MessageInterface
             }
 
             $v = (string) $v;
-            if (preg_match("#[\r\n\0]#", $v)) {
+            if (preg_match("/[\x00-\x08\x0A-\x1F\x7F]/", $v)) {
                 throw new \InvalidArgumentException('Header value contains invalid characters (CR, LF or NULL)');
             }
 
