@@ -2,7 +2,7 @@ name: Validate Code
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ '*' ]
   push:
     branches: [ main, 'feature/**', 'fix/**', 'hotfix/**' ]
 
