@@ -65,7 +65,7 @@ echo $baseUri; // http://localhost
 echo $secureUri; // https://localhost/search?q=php+8
 ```
 
-### ✨Advanced Encoding
+### Advanced Encoding
 
 The library automatically handles complex paths and query strings, ensuring they are RFC-compliant.
 
@@ -112,6 +112,128 @@ $stream->rewind();
 
 echo $stream->getContents(); // Philharmony Framework
 echo $stream->getSize(); // 21
+```
+
+## 🏗️ Architecture: Base Message
+
+All HTTP entities inherit from the abstract Message class, providing robust header management:
+
+- **Case-insensitive headers** — withHeader('content-type', ...) and getHeader('Content-Type') work seamlessly.
+- **Protocol versioning** — Supports HTTP/1.0, 1.1, 2.0.
+- **Immutable state** — Every change produces a new instance, preventing side effects in middleware chains.
+
+
+## 🚀 Usage: HTTP Messages (Request & Response)
+
+Philharmony implements the full stack of PSR-7 messages with added "smart" capabilities through native Enum integration.
+
+### Request & ServerRequest
+
+The `Request` class is immutable and type-safe. `ServerRequest` extends it to handle server-side data like `$_SERVER`, `$_COOKIE`, and uploaded files.
+
+```php
+use Philharmony\Http\Message\Request;
+use Philharmony\Http\Message\ServerRequest;
+
+// Standard Client Request
+$request = Request::create('GET', 'https://api.example.com', '', [
+    'Accept' => 'application/json'
+]);
+
+// Smart helpers (Philharmony extension)
+if ($request->isHttps()) {
+    echo "Secure connection";
+}
+
+if ($request->isSafe()) {
+    echo "This is a read-only request (GET/HEAD/OPTIONS)";
+}
+
+if ($request->isIdempotent()) {
+    echo "Repeatable request without side effects (Safe methods + PUT/DELETE)";
+}
+
+// Server-side Request (can be created via factory in PSR-17)
+$serverRequest = ServerRequest::make(
+    method: 'POST',
+    uri: '/profile/update',
+    serverParams: $_SERVER,
+    body: '{"name": "Philharmony"}',
+    headers: ['Content-Type' => 'application/json'],
+    cookieParams: $_COOKIE
+);
+
+if ($serverRequest->isJson()) {
+    $data = $serverRequest->getParsedBody();
+}
+
+if ($request->isForm()) {
+    echo "Handling standard form data or multipart";
+}
+```
+
+### Response
+
+The `Response` class automatically handles **Reason Phrases** using the `Philharmony\Http\Enum\StatusCode`.
+
+```php
+use Philharmony\Http\Message\Response;
+
+// Automatically sets "201 Created" reason phrase
+$response = Response::create(201); 
+echo $response->getReasonPhrase(); // "Created"
+
+// Fluent interface and smart status checks
+$errorResponse = $response
+    ->withStatus(403)
+    ->withHeader('X-Reason', 'Security');
+
+// Powerful status code helpers powered by Philharmony Enums
+if ($response->isInformational()) {
+    echo "Status is 1xx";
+}
+
+if ($response->isSuccessful()) {
+    echo "Status is 2xx (Success!)";
+}
+
+if ($response->isRedirection()) {
+    echo "Status is 3xx (Redirecting...)";
+}
+
+if ($response->isClientError()) {
+    echo "Status is 4xx (Bad Request, Unauthorized, etc.)";
+}
+
+if ($response->isServerError()) {
+    echo "Status is 5xx (Server crashed)";
+}
+
+if ($response->isError()) {
+    echo "Any error occurred (4xx or 5xx)";
+}
+```
+
+## 🚀 Usage: Uploaded Files
+
+Handle file uploads with full PSR-7 compatibility and support for modern PHP features like full_path (PHP 8.1+).
+
+```php
+use Philharmony\Http\Message\UploadedFile;
+
+$file = UploadedFile::create(
+    fileOrStream: '/tmp/phpYzdqkD',
+    size: 1024,
+    errorStatus: UPLOAD_ERR_OK,
+    clientFilename: 'avatar.png',
+    clientMediaType: 'image/png',
+    fullPath: 'users/avatars/avatar.png' // PHP 8.1+ support
+);
+
+// Integration with ContentType Enum
+if ($file->getContentType()?->isImage()) {
+    $file->moveTo('/var/www/uploads/profile.png');
+}
 ```
 
 ## 🔍 Technical Specifications
