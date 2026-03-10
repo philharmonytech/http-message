@@ -32,7 +32,7 @@ class Stream implements StreamInterface
         $meta = stream_get_meta_data($this->stream);
 
         $this->seekable = $meta['seekable'];
-        $this->uri = $meta['uri'] ?? null;
+        $this->uri = $meta['uri'];
 
         $mode = $meta['mode'];
         $this->readable = (bool)preg_match(self::READ_MODES, $mode);

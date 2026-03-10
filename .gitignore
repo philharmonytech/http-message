@@ -9,6 +9,7 @@
 
 # Dependencies
 /vendor
+composer.lock
 
 # OS
 .DS_Store

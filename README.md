@@ -1,8 +1,8 @@
 # philharmony/http-message
 
-[![Validate](https://github.com/philharmonytech/http-message/actions/workflows/ci-validate.yml/badge.svg)](https://github.com/philharmonytech/http-message/actions/workflows/ci-validate.yml)
-[![Analysis](https://github.com/philharmonytech/http-message/actions/workflows/ci-analysis.yml/badge.svg)](https://github.com/philharmonytech/http-message/actions/workflows/ci-analysis.yml)
-[![Test](https://github.com/philharmonytech/http-message/actions/workflows/ci-test.yml/badge.svg)](https://github.com/philharmonytech/http-message/actions/workflows/ci-test.yml)
+[![Validate](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml/badge.svg?job=validate)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
+[![Analysis](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml/badge.svg?job=static-analysis)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
+[![Test](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml/badge.svg?job=tests)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/philharmonytech/http-message/graph/badge.svg?token=JVGM1RRACK)](https://codecov.io/github/philharmonytech/http-message)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%20to%208.4-8892BF.svg)](https://www.php.net/supported-versions.php)
 [![Latest Stable Version](https://img.shields.io/github/v/release/philharmonytech/http-message?label=stable)](https://github.com/philharmonytech/http-message/releases)
@@ -280,3 +280,14 @@ composer cs-fix
 ## 📄 License
 
 This package is open-source and licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome.
+
+If you find a bug or have an idea for improvement, please open an issue or submit a pull request.
+
+## ⭐ Support
+
+If you find this package useful, please consider giving it a star on GitHub.
+It helps the project grow and reach more developers.
