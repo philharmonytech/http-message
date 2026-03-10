@@ -96,7 +96,7 @@ class Response extends Message implements ResponseInterface
 
     public function isError(): bool
     {
-        return StatusCode::tryFrom($this->statusCode)?->isClientOrServerError() ?? false;
+        return StatusCode::tryFrom($this->statusCode)?->isError() ?? false;
     }
 
     private function resolveReasonPhrase(int $status, ?string $reason): string
