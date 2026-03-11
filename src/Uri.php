@@ -344,7 +344,7 @@ class Uri implements UriInterface
         if (\function_exists('idn_to_ascii') && !filter_var($host, FILTER_VALIDATE_IP)) {
             $converted = idn_to_ascii(
                 $host,
-                IDNA_DEFAULT,
+                IDNA_NONTRANSITIONAL_TO_ASCII,
                 \defined('INTL_IDNA_VARIANT_UTS46') ? INTL_IDNA_VARIANT_UTS46 : 0
             );
 
