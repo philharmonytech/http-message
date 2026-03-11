@@ -715,7 +715,6 @@ class UriTest extends TestCase
         Uri::create('http:/foo');
     }
 
-
     #[DataProvider('invalidHostProvider')]
     public function testInvalidHostThrowsException(string $host): void
     {
@@ -750,7 +749,6 @@ class UriTest extends TestCase
             ],
         ];
     }
-
 
     #[DataProvider('invalidSchemeProvider')]
     public function testInvalidSchemeThrowsException(string $invalidScheme): void
