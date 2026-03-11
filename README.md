@@ -1,8 +1,8 @@
 # philharmony/http-message
 
-[![Validate](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml/badge.svg?job=validate)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
-[![Analysis](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml/badge.svg?job=static-analysis)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
-[![Test](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml/badge.svg?job=tests)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
+[![Validate](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=validate)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
+[![Analysis](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=static-analysis)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
+[![Test](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=tests)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/philharmonytech/http-message/graph/badge.svg?token=JVGM1RRACK)](https://codecov.io/github/philharmonytech/http-message)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%20to%208.4-8892BF.svg)](https://www.php.net/supported-versions.php)
 [![Latest Stable Version](https://img.shields.io/github/v/release/philharmonytech/http-message?label=stable)](https://github.com/philharmonytech/http-message/releases)
@@ -150,6 +150,17 @@ $stream->rewind();
 echo $stream->getContents(); // Philharmony Framework
 echo $stream->getSize(); // 21
 ```
+
+### Predictable Stream Behaviour
+
+The `Stream` implementation ensures consistent and predictable behavior across different stream types.
+
+- **Automatic rewind for string bodies** — when creating a stream from a non-empty string, the pointer is automatically rewound.
+- **Reliable mode detection** — readable and writable capabilities are detected based on the underlying stream mode.
+- **Safe string casting** — `__toString()` safely catches all `Throwable` errors as required by PSR-7.
+- **Robust size detection** — stream size detection gracefully handles environments where `fstat()` may return unexpected values.
+
+These guarantees make the `Stream` implementation safe to use with memory streams, file streams, and custom PHP resources.
 
 ## 🏗️ Architecture: Base Message
 
