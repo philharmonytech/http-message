@@ -8,9 +8,6 @@ use Psr\Http\Message\StreamInterface;
 
 class Stream implements StreamInterface
 {
-    private const READ_MODES = '/r|a\+|ab\+|w\+|wb\+|x\+|xb\+|c\+|cb\+/';
-    private const WRITE_MODES = '/a|w|r\+|rb\+|rw|x|c/';
-
     /** @var resource|null */
     private $stream;
     private ?int $size = null;
@@ -28,15 +25,16 @@ class Stream implements StreamInterface
             throw new \InvalidArgumentException('Stream must be a valid PHP resource');
         }
 
-        $this->stream = $stream;
-        $meta = stream_get_meta_data($this->stream);
+        $meta = stream_get_meta_data($stream);
 
+        $this->stream = $stream;
         $this->seekable = $meta['seekable'];
         $this->uri = $meta['uri'];
 
         $mode = $meta['mode'];
-        $this->readable = (bool)preg_match(self::READ_MODES, $mode);
-        $this->writable = (bool)preg_match(self::WRITE_MODES, $mode);
+
+        $this->readable = self::isReadableMode($mode);
+        $this->writable = self::isWritableMode($mode);
     }
 
     public function __destruct()
@@ -59,8 +57,12 @@ class Stream implements StreamInterface
             if ($resource === false) {
                 throw new \RuntimeException('Failed to open php://memory');
             }
-            fwrite($resource, $body);
-            fseek($resource, 0);
+
+            if ($body !== '') {
+                fwrite($resource, $body);
+                rewind($resource);
+            }
+
             $body = $resource;
         }
 
@@ -82,19 +84,22 @@ class Stream implements StreamInterface
                 $this->rewind();
             }
             return $this->getContents();
-        } catch (\RuntimeException) {
+        } catch (\Throwable) {
             return '';
         }
     }
 
     public function close(): void
     {
-        if (isset($this->stream)) {
-            if (\is_resource($this->stream)) {
-                fclose($this->stream);
-            }
-            $this->detach();
+        if (!isset($this->stream)) {
+            return;
         }
+
+        if (\is_resource($this->stream)) {
+            fclose($this->stream);
+        }
+
+        $this->detach();
     }
 
     public function detach()
@@ -104,7 +109,7 @@ class Stream implements StreamInterface
         }
 
         $result = $this->stream;
-        unset($this->stream);
+        $this->stream = null;
         $this->size = null;
         $this->uri = null;
         $this->readable = false;
@@ -125,7 +130,7 @@ class Stream implements StreamInterface
         }
 
         $stats = fstat($this->stream);
-        if ($stats !== false && isset($stats['size'])) {
+        if (\is_array($stats) && isset($stats['size'])) {
             $this->size = $stats['size'];
             return $this->size;
         }
@@ -274,6 +279,20 @@ class Stream implements StreamInterface
     protected static function openMemoryResource(): mixed
     {
         return fopen('php://memory', 'r+');
+    }
+
+    private static function isReadableMode(string $mode): bool
+    {
+        return str_contains($mode, 'r') || str_contains($mode, '+');
+    }
+
+    private static function isWritableMode(string $mode): bool
+    {
+        return str_contains($mode, 'w') ||
+            str_contains($mode, 'a') ||
+            str_contains($mode, 'x') ||
+            str_contains($mode, 'c') ||
+            str_contains($mode, '+');
     }
 
     /**
