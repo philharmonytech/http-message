@@ -17,10 +17,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Validation of percent-encoding in URI components
 - Normalization of path when authority is present
 - Detection of schemes that require a host
+- Improved `Stream` mode detection using `isReadableMode()` and `isWritableMode()`
+- Improved `Stream::close()` readability
+- `Stream::__toString()` now safely catches `Throwable`
 
 ### Changed
 - `with*()` methods now return the same instance when the value does not change
 - Query and fragment components now consistently normalize empty values
+- `Stream` now uses `is_array($stats)` for safer stream size detection
+- Internal stream reference is now reset using `$this->stream = null` instead of `unset()`
+- `Stream::create()` now rewinds the pointer when creating a stream from a non-empty string
+
+### Tests
+- Refactored and grouped `Stream` tests for better readability
+- Added additional edge-case tests for stream behavior
 
 ---
 

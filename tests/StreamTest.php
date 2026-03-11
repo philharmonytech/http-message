@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Philharmony\Http\Message\Tests;
 
 use Philharmony\Http\Message\Stream;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\StreamInterface;
 
 class StreamTest extends TestCase
 {
@@ -37,24 +39,33 @@ class StreamTest extends TestCase
         Stream::create(12345);
     }
 
+    public function testCreateThrowsExceptionOnFopenFailure(): void
+    {
+        $brokenStreamClass = new class (fopen('php://memory', 'r')) extends Stream {
+            protected static function openMemoryResource(): mixed
+            {
+                return false;
+            }
+        };
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to open php://memory');
+
+        $brokenStreamClass::create('some content');
+    }
+
+    public function testToString(): void
+    {
+        $stream = Stream::create('Philharmony');
+
+        $this->assertSame('Philharmony', (string) $stream);
+    }
+
     public function testToStringReturnsEmptyStringOnFailure(): void
     {
         $stream = Stream::create('Philharmony');
         $stream->detach();
         $this->assertSame('', (string)$stream);
-    }
-
-    public function testDetachReturnsNullIfAlreadyDetached(): void
-    {
-        $resource = fopen('php://memory', 'r+');
-        $stream = new Stream($resource);
-
-        $this->assertSame($resource, $stream->detach());
-        $this->assertNull($stream->detach());
-
-        if (\is_resource($resource)) {
-            fclose($resource);
-        }
     }
 
     public function testToStringReturnsEmptyStringOnRuntimeException(): void
@@ -91,25 +102,33 @@ class StreamTest extends TestCase
     {
         $resource = fopen('http://google.com', 'r');
 
-        $stream = new Stream($resource);
+        $stream = Stream::create($resource);
         $this->assertNull($stream->getSize());
 
         fclose($resource);
     }
 
-    public function testTellThrowsOnDetached(): void
+    public function testSizeResetAfterDetach(): void
     {
         $stream = Stream::create('Philharmony');
+        $this->assertSame(11, $stream->getSize());
         $stream->detach();
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Stream is detached');
-        $stream->tell();
+        $this->assertNull($stream->getSize());
+    }
+
+    public function testSeekAndRewind(): void
+    {
+        $stream = Stream::create('abcdef');
+        $stream->seek(2);
+        $this->assertSame(2, $stream->tell());
+        $stream->rewind();
+        $this->assertSame(0, $stream->tell());
     }
 
     public function testTellThrowsExceptionOnSystemError(): void
     {
         $resource = fopen('php://memory', 'r+');
-        $stream = new Stream($resource);
+        $stream = Stream::create($resource);
 
         fclose($resource);
 
@@ -133,7 +152,7 @@ class StreamTest extends TestCase
     public function testSeekThrowsExceptionWhenNotSeekable(): void
     {
         $resource = fopen('php://output', 'w');
-        $stream = new Stream($resource);
+        $stream = Stream::create($resource);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Stream is not seekable');
@@ -145,7 +164,7 @@ class StreamTest extends TestCase
     public function testSeekThrowsExceptionOnSystemError(): void
     {
         $resource = fopen('php://memory', 'r+');
-        $stream = new Stream($resource);
+        $stream = Stream::create($resource);
 
         fclose($resource);
 
@@ -155,23 +174,56 @@ class StreamTest extends TestCase
         $stream->seek(0);
     }
 
-    public function testSeekAndRewind(): void
+    public function testRewindThrowsWhenNotSeekable(): void
     {
-        $stream = Stream::create('abcdef');
-        $stream->seek(2);
-        $this->assertSame(2, $stream->tell());
+        $resource = fopen('php://output', 'w');
+        $stream = Stream::create($resource);
+
+        $this->expectException(\RuntimeException::class);
+
         $stream->rewind();
-        $this->assertSame(0, $stream->tell());
     }
 
-    public function testReadThrowsOnDetached(): void
-    {
-        $stream = Stream::create('data');
+    #[DataProvider('detachedOperations')]
+    public function testOperationsThrowWhenDetached(
+        StreamInterface $stream,
+        callable $operation
+    ): void {
         $stream->detach();
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Stream is detached');
-        $stream->read(1);
+
+        $operation($stream);
+    }
+
+    /**
+     * @return array<string, array{stream: StreamInterface, operation: callable}>
+     */
+    public static function detachedOperations(): array
+    {
+        return [
+            'read' => [
+                'stream' => Stream::create('Philharmony'),
+                'operation' => fn (Stream $stream): string => $stream->read(1),
+            ],
+            'write' => [
+                'stream' => Stream::create('Philharmony'),
+                'operation' => fn (Stream $stream): int => $stream->write('h'),
+            ],
+            'tell' => [
+                'stream' => Stream::create('Philharmony'),
+                'operation' => fn (Stream $stream): int => $stream->tell(),
+            ],
+            'seek' => [
+                'stream' => Stream::create('Philharmony'),
+                'operation' => fn (Stream $stream) => $stream->seek(0),
+            ],
+            'getContents' => [
+                'stream' => Stream::create('Philharmony'),
+                'operation' => fn (Stream $stream): string => $stream->getContents(),
+            ],
+        ];
     }
 
     public function testReadWithZeroLengthReturnsEmptyString(): void
@@ -190,36 +242,11 @@ class StreamTest extends TestCase
         $stream->read(-1);
     }
 
-    public function testCreateThrowsExceptionOnFopenFailure(): void
-    {
-        $brokenStreamClass = new class (fopen('php://memory', 'r')) extends Stream {
-            protected static function openMemoryResource(): mixed
-            {
-                return false;
-            }
-        };
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Failed to open php://memory');
-
-        $brokenStreamClass::create('some content');
-    }
-
-    public function testWriteThrowsOnDetached(): void
-    {
-        $stream = Stream::create('');
-        $stream->detach();
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Stream is detached');
-        $stream->write('data');
-    }
-
     public function testReadThrowsWhenNotReadable(): void
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'phil_write');
         $resource = fopen($tempFile, 'w');
-        $stream = new Stream($resource);
+        $stream = Stream::create($resource);
 
         $this->assertFalse($stream->isReadable());
 
@@ -233,22 +260,13 @@ class StreamTest extends TestCase
         }
     }
 
-    public function testWriteThrowsWhenNotWritable(): void
+    public function testReadPastEndReturnsEmptyString(): void
     {
-        $tempFile = tempnam(sys_get_temp_dir(), 'phil_read');
-        $resource = fopen($tempFile, 'r');
-        $stream = new Stream($resource);
+        $stream = Stream::create('abc');
 
-        $this->assertFalse($stream->isWritable());
+        $stream->read(3);
 
-        try {
-            $this->expectException(\RuntimeException::class);
-            $this->expectExceptionMessage('Stream is not writable');
-            $stream->write('data');
-        } finally {
-            fclose($resource);
-            unlink($tempFile);
-        }
+        $this->assertSame('', $stream->read(1));
     }
 
     public function testWriteAndReadSystemErrors(): void
@@ -287,6 +305,53 @@ class StreamTest extends TestCase
         $this->assertTrue($exceptionThrown, 'Read exception was not thrown');
     }
 
+    public function testWriteAndRead(): void
+    {
+        $stream = Stream::create('');
+
+        $bytes = $stream->write('Philharmony');
+
+        $this->assertSame(11, $bytes);
+
+        $stream->rewind();
+
+        $this->assertSame('Philharmony', $stream->read(11));
+    }
+
+    public function testWriteEmptyString(): void
+    {
+        $stream = Stream::create('');
+
+        $this->assertSame(0, $stream->write(''));
+    }
+
+    public function testWriteThrowsWhenNotWritable(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'phil_read');
+        $resource = fopen($tempFile, 'r');
+        $stream = Stream::create($resource);
+
+        $this->assertFalse($stream->isWritable());
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('Stream is not writable');
+            $stream->write('data');
+        } finally {
+            fclose($resource);
+            unlink($tempFile);
+        }
+    }
+
+    public function testWriteMovesPointer(): void
+    {
+        $stream = Stream::create('');
+
+        $stream->write('abc');
+
+        $this->assertSame(3, $stream->tell());
+    }
+
     public function testTriggerErrorHandlerWithWarning(): void
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'phil_test');
@@ -310,6 +375,15 @@ class StreamTest extends TestCase
         }
     }
 
+    public function testGetContents(): void
+    {
+        $stream = Stream::create('Philharmony');
+
+        $stream->read(4);
+
+        $this->assertSame('harmony', $stream->getContents());
+    }
+
     public function testGetContentsThrowsOnFailure(): void
     {
         $resource = fopen('php://memory', 'r+');
@@ -328,21 +402,11 @@ class StreamTest extends TestCase
         $stream->getContents();
     }
 
-    public function testGetContentsThrowsOnDetached(): void
-    {
-        $stream = Stream::create('');
-        $stream->detach();
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Stream is detached');
-        $stream->getContents();
-    }
-
     public function testGetContentsThrowsWhenNotReadable(): void
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'phil_write');
         $resource = fopen($tempFile, 'w');
-        $stream = new Stream($resource);
+        $stream = Stream::create($resource);
 
         try {
             $this->expectException(\RuntimeException::class);
@@ -365,7 +429,7 @@ class StreamTest extends TestCase
     public function testGetMetadataReturnsAllAndSpecificKeys(): void
     {
         $resource = fopen('php://memory', 'r+');
-        $stream = new Stream($resource);
+        $stream = Stream::create($resource);
 
         $this->assertIsArray($stream->getMetadata());
         $this->assertSame('php://memory', $stream->getMetadata('uri'));
@@ -387,5 +451,62 @@ class StreamTest extends TestCase
 
         $stream->detach();
         $this->assertTrue($stream->eof());
+    }
+
+    public function testCloseClosesStream(): void
+    {
+        $resource = fopen('php://memory', 'r+');
+        $stream = Stream::create($resource);
+
+        $stream->close();
+
+        $this->assertNull($stream->detach());
+    }
+
+    public function testStreamStateConsistency(): void
+    {
+        $stream = Stream::create('abcdef');
+
+        $this->assertSame(0, $stream->tell());
+        $this->assertFalse($stream->eof());
+
+        $this->assertSame('ab', $stream->read(2));
+        $this->assertSame(2, $stream->tell());
+
+        $this->assertSame('cd', $stream->read(2));
+        $this->assertSame(4, $stream->tell());
+
+        $this->assertSame('ef', $stream->getContents());
+        $this->assertTrue($stream->eof());
+
+        $stream->rewind();
+
+        $this->assertSame(0, $stream->tell());
+        $this->assertSame('abcdef', $stream->getContents());
+    }
+
+    public function testDetachReturnsNullIfAlreadyDetached(): void
+    {
+        $resource = fopen('php://memory', 'r+');
+        $stream = Stream::create($resource);
+
+        $this->assertSame($resource, $stream->detach());
+        $this->assertNull($stream->detach());
+
+        if (\is_resource($resource)) {
+            fclose($resource);
+        }
+    }
+
+    public function testAppendModePointerBehaviour(): void
+    {
+        $resource = fopen('php://memory', 'a+');
+        fwrite($resource, 'abc');
+        $stream = Stream::create($resource);
+        $stream->seek(1);
+        $this->assertSame(1, $stream->tell());
+        $stream->write('X');
+        $stream->rewind();
+        $this->assertSame('abcX', $stream->getContents());
     }
 }
