@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
+## [1.2.0] - ?
+
+### Added
+- IPv6 host support in `Uri`
+- Internationalized domain name (IDN) support using `idn_to_ascii()`
+
+### Improved
+- Validation of URI host component
+- Validation of percent-encoding in URI components
+- Normalization of path when authority is present
+- Detection of schemes that require a host
+
+### Changed
+- `with*()` methods now return the same instance when the value does not change
+- Query and fragment components now consistently normalize empty values
+
+---
 
 ## [1.0.1] - 2026-03-05
 
