@@ -74,6 +74,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: xdebug
+          extensions: intl
 
       - name: Install dependencies
         run: composer update --prefer-dist --no-progress

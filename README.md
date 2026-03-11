@@ -9,7 +9,7 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/philharmony/http-message)](https://packagist.org/packages/philharmony/http-message)
 [![License](https://img.shields.io/packagist/l/philharmony/http-message)](https://github.com/philharmonytech/http-message/blob/main/LICENSE)
 
-Strict, type-safe PSR-7 HTTP Message implementation for PHP. Designed for maximum security, immutability, and seamless integration with modern PHP 8.4+ ecosystems.
+Strict, type-safe **PSR-7 HTTP Message implementation** for modern PHP (8.1+). Designed for maximum security, immutability, and seamless integration with modern PHP 8.1+ ecosystems.
 
 ## 📖 Description
 
@@ -18,8 +18,28 @@ Strict, type-safe PSR-7 HTTP Message implementation for PHP. Designed for maximu
 - **Full PSR-7 Compliance** — Interchangeable with any PSR-compliant library.
 - **Strict Typing** — Verified with **PHPStan Level 9** for rock-solid reliability.
 - **Security by Design** — Prevents common URI vulnerabilities like path/host ambiguity (RFC 3986).
-- **Smart Encoding** — Handles multi-byte characters and avoids double-encoding of existing percent-encoded sequences.
+- **Smart Encoding** — Handles UTF-8 characters and avoids double-encoding of existing percent-encoded sequences.
+- **IPv6 & IDN Support** — Fully supports IPv6 hosts and internationalized domain names.
 - **Enum Integration** — Works natively with `philharmony/http-enum` for scheme and port logic.
+- **Strict Validation** — Prevents invalid hosts and illegal URI characters according to RFC 3986.
+
+## ✨ Key Features
+
+- **Full PSR-7 compliance** — Fully compatible with the PHP ecosystem.
+- **Strict typing** — Verified with PHPStan Level 9.
+- **Immutable design** — Safe for middleware pipelines.
+- **IPv6 & IDN support** — Modern host formats supported out of the box.
+- **Smart URI encoding** — Prevents double-encoding and handles Unicode safely.
+- **Security-focused validation** — Rejects invalid hosts and illegal URI characters.
+
+## 💡 Why philharmony/http-message?
+
+While many PSR-7 implementations focus on compatibility, **philharmony/http-message** focuses on:
+
+- **Maximum type safety** through strict typing and PHPStan Level 9 analysis
+- **Security-first URI handling** following RFC 3986
+- **Modern PHP support** (8.1–8.4)
+- **Clean immutable design** optimized for middleware architectures
 
 ## 📦 Installation
 
@@ -49,9 +69,25 @@ $uri = Uri::fromParts([
     'path' => '/v1/users'
 ]);
 ```
+
+### IPv6 and IDN Hosts
+
+The URI implementation supports modern host formats including IPv6 and internationalized domain names.
+
+```php
+use Philharmony\Http\Message\Uri;
+
+// IPv6 host
+$uri = Uri::create('http://[2001:db8::1]/api');
+
+// IDN host (automatically normalized)
+$uri = Uri::create('https://münich.example');
+```
+
 ### Immutability in Action
 
 As per PSR-7, `Uri` objects are immutable. Every modification returns a new instance.
+If the new value is identical to the current one, the same instance is returned for performance.
 
 ```php
 $baseUri = Uri::create('http://localhost');
@@ -71,7 +107,8 @@ The library automatically handles complex paths and query strings, ensuring they
 
 ```php
 // Handles spaces and special characters
-$uri = (new Uri())->withPath('/my documents/notes & tasks');
+$uri = Uri::create('https://example.com')
+    ->withPath('/my documents/notes & tasks');
 echo $uri->getPath(); // /my%20documents/notes%20%26%20tasks
 
 // Protects already encoded characters (prevents double % encoding)
@@ -81,7 +118,7 @@ echo $uri->getQuery(); // search=php%208 (NOT search=php%25208)
 
 ## 🚀 Usage: Stream
 
-The `Stream` class provides a type-safe wrapper around PHP resources (`fopen, php://memory`, etc.).
+The `Stream` class provides a type-safe wrapper around PHP resources (`fopen`, `php://memory`, etc.).
 
 ### Polymorphic Creation
 
