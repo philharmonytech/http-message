@@ -304,8 +304,8 @@ class Stream implements StreamInterface
      */
     private function callWithErrorHandler($resource, callable $callback, string $errorMessage): mixed
     {
-        set_error_handler(static function (int $errno, string $errstr) use ($errorMessage): never {
-            throw new \RuntimeException("{$errorMessage}: {$errstr}");
+        set_error_handler(static function (int $errNo, string $errStr) use ($errorMessage): never {
+            throw new \RuntimeException("{$errorMessage}: {$errStr}");
         });
 
         try {
