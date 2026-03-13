@@ -11,7 +11,7 @@ use Psr\Http\Message\UriInterface;
 
 class UriTest extends TestCase
 {
-    #[DataProvider('getUriDataProvider')]
+    #[DataProvider('uriDataProvider')]
     public function testCreateUri(
         string $uri,
         array $expectedParts
@@ -47,7 +47,7 @@ class UriTest extends TestCase
      *     }
      * }>
      */
-    public static function getUriDataProvider(): array
+    public static function uriDataProvider(): array
     {
         return [
             'default uri' => [
@@ -458,7 +458,7 @@ class UriTest extends TestCase
         ];
     }
 
-    #[DataProvider('getIdnDataProvider')]
+    #[DataProvider('idnDataProvider')]
     public function testIdn(
         string $uri,
         string $host
@@ -474,7 +474,7 @@ class UriTest extends TestCase
     /**
      * @return array<string, array{uri: string, host: string}>
      */
-    public static function getIdnDataProvider(): array
+    public static function idnDataProvider(): array
     {
         return [
             'converted to ascii' => [
@@ -618,6 +618,14 @@ class UriTest extends TestCase
                 'operation' => fn (Uri $uri): UriInterface => $uri->withFragment('section-2'),
             ],
         ];
+    }
+
+    public function testWithUserInfoEncodesReservedCharacters(): void
+    {
+        $uri = Uri::create('http://example.com')->withUserInfo('user@name', 'p@ss');
+
+        $this->assertSame('user%40name:p%40ss', $uri->getUserInfo());
+        $this->assertSame('http://user%40name:p%40ss@example.com', (string) $uri);
     }
 
     public function testToStringPrependsSlashWhenAuthorityAndPathWithoutSlash(): void
