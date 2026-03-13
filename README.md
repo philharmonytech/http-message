@@ -31,6 +31,7 @@ Strict, type-safe **PSR-7 HTTP Message implementation** for modern PHP (8.1+). D
 - **IPv6 & IDN support** — Modern host formats supported out of the box.
 - **Smart URI encoding** — Prevents double-encoding and handles Unicode safely.
 - **Security-focused validation** — Rejects invalid hosts and illegal URI characters.
+- **Upload error abstraction** — PHP upload errors wrapped in a type-safe enum.
 
 ## 💡 Why philharmony/http-message?
 
@@ -281,6 +282,20 @@ $file = UploadedFile::create(
 // Integration with ContentType Enum
 if ($file->getContentType()?->isImage()) {
     $file->moveTo('/var/www/uploads/profile.png');
+}
+```
+
+### Upload Error Handling
+
+Upload errors are represented internally by the `UploadError` enum.
+
+```php
+use Philharmony\Http\Message\Enum\UploadError;
+
+$error = UploadError::from($file->getError());
+
+if ($error->isError()) {
+    echo $error->message();
 }
 ```
 

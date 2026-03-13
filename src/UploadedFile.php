@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Philharmony\Http\Message;
 
 use Philharmony\Http\Enum\ContentType;
+use Philharmony\Http\Message\Enum\UploadError;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UploadedFileInterface;
 
@@ -13,7 +14,7 @@ class UploadedFile implements UploadedFileInterface
     private ?string $file = null;
     private ?StreamInterface $stream = null;
     private ?int $size;
-    private int $error;
+    private UploadError $uploadError;
     private ?string $clientFilename;
     private ?string $clientMediaType;
     private ?string $fullPath;
@@ -27,18 +28,28 @@ class UploadedFile implements UploadedFileInterface
         ?string $clientMediaType = null,
         ?string $fullPath = null
     ) {
+        $uploadError = UploadError::tryFrom($errorStatus);
+
+        if (!$uploadError instanceof UploadError) {
+            throw new \RuntimeException(
+                \sprintf('Invalid upload error status "%d"', $errorStatus)
+            );
+        }
+
         $this->size = $size;
-        $this->error = $errorStatus;
+        $this->uploadError = $uploadError;
         $this->clientFilename = $clientFilename;
         $this->clientMediaType = $clientMediaType;
         $this->fullPath = $fullPath;
 
-        if ($this->error === UPLOAD_ERR_OK) {
-            if (\is_string($fileOrStream)) {
-                $this->file = $fileOrStream;
-            } else {
-                $this->stream = $fileOrStream;
-            }
+        if ($uploadError->isError()) {
+            return;
+        }
+
+        if (\is_string($fileOrStream)) {
+            $this->file = $fileOrStream;
+        } else {
+            $this->stream = $fileOrStream;
         }
     }
 
@@ -68,12 +79,15 @@ class UploadedFile implements UploadedFileInterface
             return $this->stream;
         }
 
-        $resource = @fopen((string) $this->file, 'r');
+        $resource = @fopen((string)$this->file, 'rb');
         if ($resource === false) {
-            throw new \RuntimeException(\sprintf('Unable to open file "%s"', $this->file));
+            throw new \RuntimeException(
+                \sprintf('Unable to open file "%s"', $this->file)
+            );
         }
 
         $this->stream = Stream::create($resource);
+        $this->file = null;
 
         return $this->stream;
     }
@@ -93,20 +107,30 @@ class UploadedFile implements UploadedFileInterface
                 $this->file = null;
             }
         } else {
-            $targetResource = @fopen($targetPath, 'w');
-            if ($targetResource === false) {
-                throw new \RuntimeException(\sprintf('Unable to write to path "%s"', $targetPath));
-            }
-
-            $targetStream = Stream::create($targetResource);
             $sourceStream = $this->getStream();
             $sourceStream->rewind();
 
-            while (!$sourceStream->eof()) {
-                $targetStream->write($sourceStream->read(4096));
+            $targetResource = @fopen($targetPath, 'wb');
+            if ($targetResource === false) {
+                throw new \RuntimeException(
+                    \sprintf('Unable to write to path "%s"', $targetPath)
+                );
             }
 
-            $targetStream->close();
+            $targetStream = Stream::create($targetResource);
+
+            try {
+                while (!$sourceStream->eof()) {
+                    $targetStream->write($sourceStream->read(4096));
+                }
+            } catch (\Throwable $exception) {
+                if (is_file($targetPath)) {
+                    @unlink($targetPath);
+                }
+                throw $exception;
+            } finally {
+                $targetStream->close();
+            }
 
             if ($this->stream !== null) {
                 $this->stream->close();
@@ -117,7 +141,9 @@ class UploadedFile implements UploadedFileInterface
         }
 
         if (!$this->moved) {
-            throw new \RuntimeException(\sprintf('Uploaded file could not be moved to "%s"', $targetPath));
+            throw new \RuntimeException(
+                \sprintf('Uploaded file could not be moved to "%s"', $targetPath)
+            );
         }
     }
 
@@ -128,7 +154,7 @@ class UploadedFile implements UploadedFileInterface
 
     public function getError(): int
     {
-        return $this->error;
+        return $this->uploadError->value;
     }
 
     public function getClientFilename(): ?string
@@ -148,19 +174,29 @@ class UploadedFile implements UploadedFileInterface
 
     private function validateActive(): void
     {
-        if ($this->error !== UPLOAD_ERR_OK) {
-            throw new \RuntimeException('Cannot retrieve stream due to upload error');
+        if ($this->uploadError->isError()) {
+            throw new \RuntimeException(
+                \sprintf(
+                    'Cannot retrieve stream due to upload error: %s',
+                    $this->uploadError->message()
+                )
+            );
         }
 
         if ($this->moved) {
-            throw new \RuntimeException('Cannot retrieve stream after it has been moved');
+            throw new \RuntimeException('Uploaded file has already been moved');
         }
     }
 
     private function moveFile(string $source, string $target): bool
     {
-        return PHP_SAPI === 'cli'
-            ? @rename($source, $target)
-            : @move_uploaded_file($source, $target);
+        // This branch relies on PHP SAPI upload internals and is not unit-testable.
+        // @codeCoverageIgnoreStart
+        if (is_uploaded_file($source)) {
+            return @move_uploaded_file($source, $target);
+        }
+        // @codeCoverageIgnoreEnd
+
+        return @rename($source, $target);
     }
 }

@@ -47,7 +47,7 @@ class UploadedFileTest extends TestCase
         $this->assertEquals($fileInfo['basename'], $uploadedFile->getClientFilename());
         $this->assertEquals($fileInfo['extension'] ?? null, $uploadedFile->getClientMediaType());
         $this->assertEquals($fileInfo['dirname'], $uploadedFile->getFullPath());
-        $this->assertEmpty($uploadedFile->getContentType());
+        $this->assertNull($uploadedFile->getContentType());
         $this->assertInstanceOf(Stream::class, $stream);
         $this->assertSame('content', $stream->getContents());
     }
@@ -66,6 +66,14 @@ class UploadedFileTest extends TestCase
         $this->assertSame($stream, $uploadedFile->getStream());
         $this->assertEquals('content from stream', (string) $uploadedFile->getStream());
         $this->assertSame(ContentType::JSON, $uploadedFile->getContentType());
+    }
+
+    public function testCreateThrowsExceptionWhenInvalidUploadErrorProvided(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Invalid upload error status "999"');
+
+        UploadedFile::create('php://temp', null, 999);
     }
 
     public function testMoveToFromPath(): void
@@ -120,7 +128,7 @@ class UploadedFileTest extends TestCase
         $uploadedFile->moveTo($target);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Cannot retrieve stream after it has been moved');
+        $this->expectExceptionMessage('Uploaded file has already been moved');
 
         $uploadedFile->moveTo($target . '_2');
         unlink($target);
@@ -150,6 +158,34 @@ class UploadedFileTest extends TestCase
         $this->expectExceptionMessage("Unable to write to path \"$invalidTarget\"");
 
         $upload->moveTo($invalidTarget);
+    }
+
+    public function testMoveToFromStreamCleansUpOnWriteFailure(): void
+    {
+        $resource = fopen('php://memory', 'r+');
+        $stream = new class ($resource) extends Stream {
+            public function read(int $length): string
+            {
+                throw new \RuntimeException('read failure');
+            }
+            public function eof(): bool
+            {
+                return false;
+            }
+        };
+
+        $upload = UploadedFile::create($stream, 10, UPLOAD_ERR_OK);
+        $target = sys_get_temp_dir() . '/philharmony_uploaded_' . uniqid();
+
+        $this->expectException(\RuntimeException::class);
+
+        try {
+            $upload->moveTo($target);
+        } finally {
+            if (\is_resource($resource)) {
+                fclose($resource);
+            }
+        }
     }
 
     public function testMoveToThrowsExceptionIfRenameFails(): void
