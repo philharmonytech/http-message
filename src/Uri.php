@@ -99,6 +99,8 @@ class Uri implements UriInterface
     public function withUserInfo(string $user, ?string $password = null): static
     {
         $password = $password ?? '';
+        $user = $this->filterComponent($user);
+        $password = $this->filterComponent($password);
 
         if ($this->user === $user && $this->password === $password) {
             return $this;
