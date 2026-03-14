@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - `Message::setHeaders()` now correctly replaces headers that differ only by case during initialization.
 - `UploadedFile::moveTo()` now ensures partially written files are cleaned up when stream copy fails.
-- `Stream::__toString()` now safely catches `Throwable`.
+- `Stream::__toString()` now safely catches `Throwable`
+- `Response` now validates that HTTP status codes are within the valid range (100–599).
 
 ### Improved
 - Validation of URI host component.
@@ -40,7 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added additional edge-case tests for stream behavior.
 - Added test covering stream write failure cleanup.
 - Added tests for `UploadError`
-- Added test covering header replacement when header names differ only by case in `Message::setHeaders()`.
+- Added test covering header replacement when header names differ only by case in `Message::setHeaders()`
+- Added tests verifying HTTP status code validation in `Response`.
 
 ---
 
