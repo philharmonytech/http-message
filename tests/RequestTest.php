@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Philharmony\Http\Message\Tests;
 
+use Philharmony\Http\Enum\HttpMethod;
 use Philharmony\Http\Message\Request;
 use Philharmony\Http\Message\Uri;
 use PHPUnit\Framework\TestCase;
@@ -69,8 +70,35 @@ class RequestTest extends TestCase
 
         $newRequest = $request->withMethod('post');
 
-        $this->assertSame('POST', $newRequest->getMethod());
+        $this->assertSame('post', $newRequest->getMethod());
         $this->assertNotSame($request, $newRequest);
+    }
+
+    public function testWithMethodThrowsOnInvalidToken(): void
+    {
+        $request = Request::create('GET', '/');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $request->withMethod('GET ');
+    }
+
+    public function testWithMethodReturnsSameInstanceWhenUnchanged(): void
+    {
+        $request = Request::create('GET', '/');
+
+        $sameRequest = $request->withMethod('GET');
+
+        $this->assertSame($request, $sameRequest);
+    }
+
+    public function testGetMethodEnumReturnsEnumOrNull(): void
+    {
+        $request = Request::create('GET', '/');
+
+        $this->assertSame(HttpMethod::GET, $request->getMethodEnum());
+
+        $custom = Request::create('CUSTOM', '/');
+        $this->assertNull($custom->getMethodEnum());
     }
 
     public function testGetRequestTargetDefaultsToUriPathAndQuery(): void
