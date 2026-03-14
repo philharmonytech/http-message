@@ -16,6 +16,7 @@ class Request extends Message implements RequestInterface
     private string $method;
     private ?string $requestTarget = null;
     private UriInterface $uri;
+    private ?HttpMethod $methodEnum = null;
 
     /**
      * @param string $method
@@ -95,8 +96,15 @@ class Request extends Message implements RequestInterface
 
     public function withMethod(string $method): static
     {
+        $method = $this->filterMethod($method);
+
+        if ($method === $this->method) {
+            return $this;
+        }
+
         $new = clone $this;
-        $new->method = $this->filterMethod($method);
+        $new->method = $method;
+        $new->methodEnum = HttpMethod::tryFrom(strtoupper($method));
 
         return $new;
     }
@@ -124,6 +132,11 @@ class Request extends Message implements RequestInterface
         return $new;
     }
 
+    public function getMethodEnum(): ?HttpMethod
+    {
+        return $this->methodEnum;
+    }
+
     public function isHttps(): bool
     {
         return Scheme::tryFrom($this->uri->getScheme())?->isSecure() ?? false;
@@ -131,12 +144,12 @@ class Request extends Message implements RequestInterface
 
     public function isSafe(): bool
     {
-        return HttpMethod::tryFrom($this->method)?->isSafe() ?? false;
+        return $this->methodEnum?->isSafe() ?? false;
     }
 
     public function isIdempotent(): bool
     {
-        return HttpMethod::tryFrom($this->method)?->isIdempotent() ?? false;
+        return $this->methodEnum?->isIdempotent() ?? false;
     }
 
     public function isJson(): bool
@@ -151,10 +164,13 @@ class Request extends Message implements RequestInterface
 
     private function filterMethod(string $method): string
     {
-        $upperMethod = strtoupper($method);
-        $enumMethod = HttpMethod::tryFrom($upperMethod);
+        if (!preg_match('/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/', $method)) {
+            throw new \InvalidArgumentException(\sprintf('Invalid HTTP method "%s"', $method));
+        }
 
-        return $enumMethod ? $enumMethod->name : $upperMethod;
+        $this->methodEnum = HttpMethod::tryFrom(strtoupper($method));
+
+        return $method;
     }
 
     private function updateHostFromUri(): void
