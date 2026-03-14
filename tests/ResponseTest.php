@@ -86,4 +86,11 @@ class ResponseTest extends TestCase
         $this->assertFalse($info->isError());
     }
 
+    public function testWithStatusThrowsOnInvalidCode(): void
+    {
+        $response = Response::create();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $response->withStatus(700);
+    }
 }
