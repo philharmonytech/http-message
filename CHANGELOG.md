@@ -26,7 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Detection of schemes that require a host.
 - Improved `Stream` mode detection using `isReadableMode()` and `isWritableMode()`.
 - Improved `Stream::close()` readability.
-- Improved `UploadedFile::moveTo()` stream handling and error propagation.
+- Improved `UploadedFile::moveTo()` stream handling and error propagation
+- `Request` now caches `HttpMethod` enum for method helpers like `isSafe()` and `isIdempotent()`.
+- `Request` now validates HTTP method tokens, exposes `getMethodEnum()`, and caches the `HttpMethod` enum for helper methods.
 
 ### Changed
 - `with*()` methods now return the same instance when the value does not change.
@@ -42,7 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added test covering stream write failure cleanup.
 - Added tests for `UploadError`
 - Added test covering header replacement when header names differ only by case in `Message::setHeaders()`
-- Added tests verifying HTTP status code validation in `Response`.
+- Added tests verifying HTTP status code validation in `Response`
+- Added tests covering `Request::getMethodEnum()` and `withMethod()` behavior.
 
 ---
 
