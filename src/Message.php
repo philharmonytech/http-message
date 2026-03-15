@@ -68,7 +68,9 @@ abstract class Message implements MessageInterface
 
     public function getHeaderLine(string $name): string
     {
-        return implode(', ', $this->getHeader($name));
+        $values = $this->getHeader($name);
+
+        return $values === [] ? '' : implode(', ', $values);
     }
 
     public function withHeader(string $name, mixed $value): static
@@ -138,11 +140,19 @@ abstract class Message implements MessageInterface
      */
     protected function setHeaders(array $headers): void
     {
+        $this->headers = [];
+        $this->headerNames = [];
+
         foreach ($headers as $header => $value) {
             $headerName = (string) $header;
             $this->validateHeaderName($headerName);
 
             $normalized = strtolower($headerName);
+
+            if (isset($this->headerNames[$normalized])) {
+                unset($this->headers[$this->headerNames[$normalized]]);
+            }
+
             $this->headerNames[$normalized] = $headerName;
             $this->headers[$headerName] = $this->normalizeHeaderValue($value);
         }

@@ -27,6 +27,7 @@ class Response extends Message implements ResponseInterface
         string $version = '1.1',
         ?string $reason = null
     ) {
+        $this->validateStatusCode($status);
         parent::__construct($body, $headers, $version);
 
         $this->statusCode = $status;
@@ -57,6 +58,7 @@ class Response extends Message implements ResponseInterface
 
     public function withStatus(int $code, ?string $reasonPhrase = null): static
     {
+        $this->validateStatusCode($code);
         $new = clone $this;
         $new->statusCode = $code;
         $new->reasonPhrase = $this->resolveReasonPhrase($code, $reasonPhrase);
@@ -106,5 +108,12 @@ class Response extends Message implements ResponseInterface
         }
 
         return StatusCode::tryFrom($status)?->phrase() ?? '';
+    }
+
+    private function validateStatusCode(int $code): void
+    {
+        if ($code < 100 || $code > 599) {
+            throw new \InvalidArgumentException(\sprintf('Invalid HTTP status code "%d"', $code));
+        }
     }
 }

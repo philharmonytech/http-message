@@ -50,6 +50,40 @@ Install via Composer:
 composer require philharmony/http-message
 ```
 
+## ⚡ Quick Start
+
+A minimal example demonstrating the core PSR-7 objects provided by this package.
+
+```php
+use Philharmony\Http\Message\Uri;
+use Philharmony\Http\Message\Request;
+use Philharmony\Http\Message\Response;
+use Philharmony\Http\Message\ServerRequest;
+
+// Create a URI
+$uri = Uri::create('https://api.example.com/users');
+
+// Create a client request
+$request = Request::create('GET', $uri);
+
+// Server-side request (incoming HTTP request)
+$serverRequest = ServerRequest::make(
+    method: 'POST',
+    uri: '/users',
+    body: '{"name":"John"}',
+    headers: ['Content-Type' => 'application/json']
+);
+
+// Access parsed body
+$data = $serverRequest->getParsedBody();
+
+// Create a response
+$response = Response::create(200)
+    ->withHeader('Content-Type', 'application/json');
+
+echo $response->getStatusCode(); // 200
+```
+
 ## 🚀 Usage: URI
 
 ### Creating a URI
@@ -171,53 +205,106 @@ All HTTP entities inherit from the abstract Message class, providing robust head
 - **Protocol versioning** — Supports HTTP/1.0, 1.1, 2.0.
 - **Immutable state** — Every change produces a new instance, preventing side effects in middleware chains.
 
-
 ## 🚀 Usage: HTTP Messages (Request & Response)
 
-Philharmony implements the full stack of PSR-7 messages with added "smart" capabilities through native Enum integration.
+Philharmony provides full implementations of PSR-7 HTTP message types:
 
-### Request & ServerRequest
+- **Request** — client-side HTTP request
+- **ServerRequest** — server-side request containing environment data
+- **Response** — HTTP response message
 
-The `Request` class is immutable and type-safe. `ServerRequest` extends it to handle server-side data like `$_SERVER`, `$_COOKIE`, and uploaded files.
+All messages extend the base `Message` abstraction and follow a fully immutable design.
+
+### Request (Client Request)
+
+The `Request` class represents an outgoing HTTP request typically used by HTTP clients.
+
+#### Creating a Request
 
 ```php
 use Philharmony\Http\Message\Request;
-use Philharmony\Http\Message\ServerRequest;
 
-// Standard Client Request
-$request = Request::create('GET', 'https://api.example.com', '', [
-    'Accept' => 'application/json'
-]);
+$request = Request::create(
+    'GET',
+    'https://api.example.com/users',
+    '',
+    ['Accept' => 'application/json']
+);
+```
 
-// Smart helpers (Philharmony extension)
-if ($request->isHttps()) {
-    echo "Secure connection";
-}
+#### Smart HTTP Method Helpers
 
+Philharmony provides helper methods powered by the `HttpMethod` enum.
+
+```php
 if ($request->isSafe()) {
-    echo "This is a read-only request (GET/HEAD/OPTIONS)";
+    echo "Safe request (GET, HEAD, OPTIONS)";
 }
 
 if ($request->isIdempotent()) {
-    echo "Repeatable request without side effects (Safe methods + PUT/DELETE)";
+    echo "Request can be safely repeated";
 }
 
-// Server-side Request (can be created via factory in PSR-17)
+if ($request->isHttps()) {
+    echo "Secure request";
+}
+```
+
+### ServerRequest (Server-Side Request)
+
+`ServerRequest` extends `Request` and represents an incoming HTTP request received by the server.
+
+It provides access to additional environment data such as:
+- server parameters (`$_SERVER`)
+- cookies (`$_COOKIE`)
+- query parameters (`$_GET`)
+- uploaded files (`$_FILES`)
+- parsed request bodies
+
+#### Creating a ServerRequest
+
+```php
+use Philharmony\Http\Message\ServerRequest;
+
 $serverRequest = ServerRequest::make(
     method: 'POST',
     uri: '/profile/update',
     serverParams: $_SERVER,
-    body: '{"name": "Philharmony"}',
+    body: '{"name":"Philharmony"}',
     headers: ['Content-Type' => 'application/json'],
     cookieParams: $_COOKIE
 );
+```
 
+#### Parsed Body Helpers
+
+The request body is automatically parsed depending on the `Content-Type` header.
+
+```php
 if ($serverRequest->isJson()) {
     $data = $serverRequest->getParsedBody();
 }
 
-if ($request->isForm()) {
-    echo "Handling standard form data or multipart";
+if ($serverRequest->isForm()) {
+    $form = $serverRequest->getParsedBody();
+}
+```
+
+#### Raw Body & Input Helpers
+
+Convenience helpers allow retrieving input values from query parameters or parsed body data.
+
+Lookup order:
+1. Query parameters
+2. Parsed request body
+
+```php
+$raw = $serverRequest->getRawBody();
+
+$userId = $serverRequest->input('user.id', 'guest');
+
+if ($serverRequest->has('token')) {
+    // token exists
 }
 ```
 

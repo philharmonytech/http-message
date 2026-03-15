@@ -86,6 +86,17 @@ class MessageTest extends TestCase
         $this->assertArrayHasKey('X-Test', $new->getHeaders());
     }
 
+    public function testSetHeadersReplacesHeaderWithDifferentCase(): void
+    {
+        $message = $this->createMessage([
+            'Content-Type' => 'text/html',
+            'content-type' => 'application/json',
+        ]);
+
+        $this->assertCount(1, $message->getHeaders());
+        $this->assertSame(['application/json'], $message->getHeader('Content-Type'));
+    }
+
     public function testGetHeaderReturnsEmptyArrayIfNotFound(): void
     {
         $message = $this->createMessage();
