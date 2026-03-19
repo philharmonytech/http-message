@@ -5,30 +5,72 @@ declare(strict_types=1);
 namespace Philharmony\Http\Message\Tests;
 
 use Philharmony\Http\Message\Stream;
+use Philharmony\Http\Message\Tests\Stub\Stream\BrokenStatsStream;
+use Philharmony\Http\Message\Tests\Stub\Stream\FileOpenFailureStream;
+use Philharmony\Http\Message\Tests\Stub\Stream\ForceReadableStream;
+use Philharmony\Http\Message\Tests\Stub\Stream\ForceSeekableStream;
+use Philharmony\Http\Message\Tests\Stub\Stream\ForceWritableStream;
+use Philharmony\Http\Message\Tests\Stub\Stream\MemoryOpenFailureStream;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamInterface;
 
 class StreamTest extends TestCase
 {
+    private static string $tempFile;
+
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+
+        self::initTempFile();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        if (file_exists(self::$tempFile)) {
+            unlink(self::$tempFile);
+        }
+
+        parent::tearDownAfterClass();
+    }
+
+    public function testCreateWithString(): void
+    {
+        $stream = Stream::create('Philharmony');
+        $this->assertSame('Philharmony', (string)$stream);
+    }
+
+    public function testCreateWithResource(): void
+    {
+        $resource = fopen('php://memory', 'r+');
+        $stream = Stream::create($resource);
+        $this->assertSame('', (string)$stream);
+    }
+
+    public function testCreateWithStreamInterface(): void
+    {
+        $firstStream = Stream::create('Philharmony');
+        $secondStream = Stream::create($firstStream);
+        $this->assertSame($firstStream, $secondStream);
+        $this->assertSame('Philharmony', (string)$firstStream);
+        $this->assertSame('Philharmony', (string)$secondStream);
+    }
+
+    public function testCreateFromFileOpensFile(): void
+    {
+        file_put_contents(self::$tempFile, 'Framework');
+
+        $stream = Stream::createFromFile(self::$tempFile);
+
+        $this->assertSame('Framework', $stream->getContents());
+    }
+
     public function testConstructorThrowsExceptionOnInvalidResource(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Stream must be a valid PHP resource');
         new Stream('not a resource');
-    }
-
-    public function testCreateWithVariousInputs(): void
-    {
-        $stream = Stream::create('Philharmony');
-        $this->assertSame('Philharmony', (string)$stream);
-
-        $resource = fopen('php://memory', 'r+');
-        $stream2 = Stream::create($resource);
-        $this->assertTrue($stream2->isWritable());
-
-        $stream3 = Stream::create($stream2);
-        $this->assertSame($stream2, $stream3);
     }
 
     public function testCreateThrowsExceptionOnInvalidInput(): void
@@ -39,52 +81,51 @@ class StreamTest extends TestCase
         Stream::create(12345);
     }
 
-    public function testCreateThrowsExceptionOnFopenFailure(): void
+    public function testCreateThrowsExceptionOnMemoryResourceOpenFailure(): void
     {
-        $brokenStreamClass = new class (fopen('php://memory', 'r')) extends Stream {
-            protected static function openMemoryResource(): mixed
-            {
-                return false;
-            }
-        };
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to open php://temp');
+
+        MemoryOpenFailureStream::create('some content');
+    }
+
+    public function testCreateFromFileThrowsOnEmptyFilename(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        Stream::createFromFile('');
+    }
+
+    public function testCreateFromFileThrowsOnEmptyMode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        Stream::createFromFile(self::$tempFile, '');
+    }
+
+    public function testCreateFromFileThrowsExceptionOnFileResourceOpenFailure(): void
+    {
+        file_put_contents(self::$tempFile, 'philharmony');
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Failed to open php://memory');
+        $this->expectExceptionMessage(\sprintf('The file "%s" cannot be opened: Unknown error message', self::$tempFile));
 
-        $brokenStreamClass::create('some content');
+        FileOpenFailureStream::createFromFile(self::$tempFile);
     }
 
-    public function testToString(): void
+    public function testToStringReturnsEmptyStringOnNotReadable(): void
     {
-        $stream = Stream::create('Philharmony');
-
-        $this->assertSame('Philharmony', (string) $stream);
-    }
-
-    public function testToStringReturnsEmptyStringOnFailure(): void
-    {
-        $stream = Stream::create('Philharmony');
-        $stream->detach();
+        $resource = fopen('php://output', 'w');
+        $stream = Stream::create($resource);
         $this->assertSame('', (string)$stream);
+        fclose($resource);
     }
 
-    public function testToStringReturnsEmptyStringOnRuntimeException(): void
+    public function testToStringReturnsEmptyStringOnResourceClose(): void
     {
         $resource = fopen('php://memory', 'r+');
-
-        $stream = new class ($resource) extends Stream {
-            public function isReadable(): bool
-            {
-                return true;
-            }
-            public function isSeekable(): bool
-            {
-                return true;
-            }
-        };
-
+        $stream = new ForceSeekableStream($resource);
         fclose($resource);
-
         $this->assertSame('', (string)$stream);
     }
 
@@ -98,93 +139,103 @@ class StreamTest extends TestCase
         $this->assertNull($stream->getSize());
     }
 
-    public function testGetSizeReturnsNullForSocketResource(): void
+    public function testGetSizeReturnsNullWhenSizeNotAvailable(): void
     {
-        $resource = fopen('http://google.com', 'r');
+        $resource = fopen('php://temp', 'r');
+        $stream = new BrokenStatsStream($resource);
 
-        $stream = Stream::create($resource);
         $this->assertNull($stream->getSize());
 
         fclose($resource);
     }
 
-    public function testSizeResetAfterDetach(): void
+    public function testGetSizeWhenStreamIsClosed(): void
+    {
+        $resource = fopen('php://memory', 'r+');
+        $stream = new Stream($resource);
+        fclose($resource);
+        $this->assertNull($stream->getSize());
+    }
+
+    public function testReadWithZeroLengthReturnsEmptyString(): void
     {
         $stream = Stream::create('Philharmony');
-        $this->assertSame(11, $stream->getSize());
-        $stream->detach();
-        $this->assertNull($stream->getSize());
+        $this->assertSame('', $stream->read(0));
+        $stream->close();
     }
 
-    public function testSeekAndRewind(): void
+    public function testReadWithNegativeLengthThrowsException(): void
     {
-        $stream = Stream::create('abcdef');
-        $stream->seek(2);
-        $this->assertSame(2, $stream->tell());
-        $stream->rewind();
-        $this->assertSame(0, $stream->tell());
+        $stream = Stream::create('Philharmony');
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Length must be a non-negative integer');
+
+        $stream->read(-1);
     }
 
-    public function testTellThrowsExceptionOnSystemError(): void
+    public function testGetMetadataOnDetached(): void
+    {
+        $stream = Stream::create('Philharmony');
+        $stream->detach();
+        $this->assertNull($stream->getMetadata('uri'));
+    }
+
+    public function testGetUriKeyFromMetadata(): void
+    {
+        $resource = fopen('php://input', 'r+');
+        $stream = Stream::create($resource);
+        $this->assertSame('php://input', $stream->getMetadata('uri'));
+    }
+
+    public function testGetAllKeyFromMetadata(): void
+    {
+        $resource = fopen('php://output', 'w+');
+        $stream = Stream::create($resource);
+        $this->assertIsArray($stream->getMetadata());
+    }
+
+    public function testNotExistKeyInMetadata(): void
+    {
+        $resource = fopen('php://memory', 'w+');
+        $stream = Stream::create($resource);
+        $this->assertNull($stream->getMetadata('non_existent_key'));
+    }
+
+    public function testEof(): void
+    {
+        $stream = Stream::create('a');
+        $this->assertFalse($stream->eof());
+        $stream->read(1);
+        $stream->read(1);
+        $this->assertTrue($stream->eof());
+
+        $stream->detach();
+        $this->assertTrue($stream->eof());
+    }
+
+    public function testCloseClosesStream(): void
     {
         $resource = fopen('php://memory', 'r+');
         $stream = Stream::create($resource);
 
-        fclose($resource);
+        $stream->close();
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Error getting stream position');
-
-        $stream->tell();
+        $this->assertNull($stream->detach());
     }
 
-    public function testSeekThrowsExceptionOnDetachedStream(): void
+    public function testAppendModePointerBehaviour(): void
     {
-        $stream = Stream::create('test');
-        $stream->detach();
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Stream is detached');
-
-        $stream->seek(0);
-    }
-
-    public function testSeekThrowsExceptionWhenNotSeekable(): void
-    {
-        $resource = fopen('php://output', 'w');
+        $resource = fopen('php://memory', 'a+');
+        fwrite($resource, 'abc');
         $stream = Stream::create($resource);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Stream is not seekable');
-        $stream->seek(0);
-
-        fclose($resource);
-    }
-
-    public function testSeekThrowsExceptionOnSystemError(): void
-    {
-        $resource = fopen('php://memory', 'r+');
-        $stream = Stream::create($resource);
-
-        fclose($resource);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Error seeking in stream');
-
-        $stream->seek(0);
-    }
-
-    public function testRewindThrowsWhenNotSeekable(): void
-    {
-        $resource = fopen('php://output', 'w');
-        $stream = Stream::create($resource);
-
-        $this->expectException(\RuntimeException::class);
-
+        $stream->seek(1);
+        $this->assertSame(1, $stream->tell());
+        $stream->write('X');
         $stream->rewind();
+        $this->assertSame('abcX', $stream->getContents());
     }
 
-    #[DataProvider('detachedOperations')]
+    #[DataProvider('detachedStateOperations')]
     public function testOperationsThrowWhenDetached(
         StreamInterface $stream,
         callable $operation
@@ -200,7 +251,7 @@ class StreamTest extends TestCase
     /**
      * @return array<string, array{stream: StreamInterface, operation: callable}>
      */
-    public static function detachedOperations(): array
+    public static function detachedStateOperations(): array
     {
         return [
             'read' => [
@@ -226,287 +277,179 @@ class StreamTest extends TestCase
         ];
     }
 
-    public function testReadWithZeroLengthReturnsEmptyString(): void
-    {
-        $stream = Stream::create('Philharmony');
-        $this->assertSame('', $stream->read(0));
-        $stream->close();
-    }
-
-    public function testReadWithNegativeLengthThrowsException(): void
-    {
-        $stream = Stream::create('Philharmony');
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Length must be a non-negative integer');
-
-        $stream->read(-1);
-    }
-
-    public function testReadThrowsWhenNotReadable(): void
-    {
-        $tempFile = tempnam(sys_get_temp_dir(), 'phil_write');
-        $resource = fopen($tempFile, 'w');
+    #[DataProvider('invalidStateOperations')]
+    public function testThrowsOnInvalidState(
+        string $targetResource,
+        string $resourceMode,
+        callable $operation,
+        string $message
+    ): void {
+        $resource = fopen($targetResource, $resourceMode);
         $stream = Stream::create($resource);
 
-        $this->assertFalse($stream->isReadable());
-
         try {
             $this->expectException(\RuntimeException::class);
-            $this->expectExceptionMessage('Stream is not readable');
-            $stream->read(1);
+            $this->expectExceptionMessage($message);
+            $operation($stream);
         } finally {
             fclose($resource);
-            unlink($tempFile);
         }
     }
 
-    public function testReadPastEndReturnsEmptyString(): void
+    /**
+     * @return array<string, array{targetResource: string, resourceMode: string, operation: callable, message: string}>
+     */
+    public static function invalidStateOperations(): array
     {
-        $stream = Stream::create('abc');
+        if (!isset(self::$tempFile)) {
+            self::$tempFile = tempnam(sys_get_temp_dir(), 'Philharmony');
+        }
 
-        $stream->read(3);
-
-        $this->assertSame('', $stream->read(1));
+        return [
+            'seek' => [
+                'targetResource' => 'php://output',
+                'resourceMode' => 'w',
+                'operation' => fn (Stream $stream) => $stream->seek(0),
+                'message' => 'Stream is not seekable',
+            ],
+            'write' => [
+                'targetResource' => self::$tempFile,
+                'resourceMode' => 'r',
+                'operation' => fn (Stream $stream): int => $stream->write('data'),
+                'message' => 'Stream is not writable',
+            ],
+            'read' => [
+                'targetResource' => self::$tempFile,
+                'resourceMode' => 'w',
+                'operation' => fn (Stream $stream): string => $stream->read(1),
+                'message' => 'Stream is not readable',
+            ],
+            'getContents' => [
+                'targetResource' => self::$tempFile,
+                'resourceMode' => 'w',
+                'operation' => fn (Stream $stream): string => $stream->getContents(),
+                'message' => 'Stream is not readable',
+            ],
+        ];
     }
 
-    public function testWriteAndReadSystemErrors(): void
+    #[DataProvider('warningStateOperations')]
+    public function testThrowsOnWarningState(
+        string $targetResource,
+        string $resourceMode,
+        string $streamClass,
+        callable $operation,
+        string $messageMatches
+    ): void {
+        $resource = fopen($targetResource, $resourceMode);
+
+        $stream = new $streamClass($resource);
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessageMatches($messageMatches);
+
+            $operation($stream);
+        } finally {
+            fclose($resource);
+        }
+    }
+
+    /**
+     * @return array<string, array{
+     *     targetResource: string,
+     *     resourceMode: string,
+     *     streamClass: string,
+     *     operation: callable,
+     *     messageMatches: string
+     * }>
+     */
+    public static function warningStateOperations(): array
+    {
+        self::initTempFile();
+
+        return [
+            'write' => [
+                'targetResource' => self::$tempFile,
+                'resourceMode' => 'r',
+                'streamClass' => ForceWritableStream::class,
+                'operation' => fn (Stream $stream): int => $stream->write('data'),
+                'messageMatches' => '/Error writing to stream: fwrite\(\):/',
+            ],
+            'read' => [
+                'targetResource' => self::$tempFile,
+                'resourceMode' => 'w',
+                'streamClass' => ForceReadableStream::class,
+                'operation' => fn (Stream $stream): string => $stream->read(1),
+                'messageMatches' => '/Error reading from stream: fread\(\):/',
+            ],
+            'seek' => [
+                'targetResource' => 'php://output',
+                'resourceMode' => 'w',
+                'streamClass' => ForceSeekableStream::class,
+                'operation' => fn (Stream $stream) => $stream->seek(0),
+                'messageMatches' => '/Error seeking in stream: fseek\(\)/',
+            ],
+            'getContent' => [
+                'targetResource' => self::$tempFile,
+                'resourceMode' => 'w',
+                'streamClass' => ForceReadableStream::class,
+                'operation' => fn (Stream $stream): string => $stream->getContents(),
+                'messageMatches' => '/Error reading from stream: stream_get_contents\(\):/',
+            ],
+        ];
+    }
+
+    #[DataProvider('systemErrorOperations')]
+    public function testSystemErrors(string $streamClass, callable $operation, string $message): void
     {
         $resource = fopen('php://memory', 'r+');
-
-        $stream = new class ($resource) extends Stream {
-            public function isWritable(): bool
-            {
-                return true;
-            }
-            public function isReadable(): bool
-            {
-                return true;
-            }
-        };
-
-        fclose($resource);
-
-        $exceptionThrown = false;
-        try {
-            $stream->write('data');
-        } catch (\RuntimeException $exception) {
-            $this->assertStringContainsString('Error writing to stream', $exception->getMessage());
-            $exceptionThrown = true;
-        }
-        $this->assertTrue($exceptionThrown, 'Write exception was not thrown');
-
-        $exceptionThrown = false;
-        try {
-            $stream->read(1);
-        } catch (\RuntimeException $exception) {
-            $this->assertStringContainsString('Error reading from stream', $exception->getMessage());
-            $exceptionThrown = true;
-        }
-        $this->assertTrue($exceptionThrown, 'Read exception was not thrown');
-    }
-
-    public function testWriteAndRead(): void
-    {
-        $stream = Stream::create('');
-
-        $bytes = $stream->write('Philharmony');
-
-        $this->assertSame(11, $bytes);
-
-        $stream->rewind();
-
-        $this->assertSame('Philharmony', $stream->read(11));
-    }
-
-    public function testWriteEmptyString(): void
-    {
-        $stream = Stream::create('');
-
-        $this->assertSame(0, $stream->write(''));
-    }
-
-    public function testWriteThrowsWhenNotWritable(): void
-    {
-        $tempFile = tempnam(sys_get_temp_dir(), 'phil_read');
-        $resource = fopen($tempFile, 'r');
-        $stream = Stream::create($resource);
-
-        $this->assertFalse($stream->isWritable());
-
-        try {
-            $this->expectException(\RuntimeException::class);
-            $this->expectExceptionMessage('Stream is not writable');
-            $stream->write('data');
-        } finally {
-            fclose($resource);
-            unlink($tempFile);
-        }
-    }
-
-    public function testWriteMovesPointer(): void
-    {
-        $stream = Stream::create('');
-
-        $stream->write('abc');
-
-        $this->assertSame(3, $stream->tell());
-    }
-
-    public function testTriggerErrorHandlerWithWarning(): void
-    {
-        $tempFile = tempnam(sys_get_temp_dir(), 'phil_test');
-        $resource = fopen($tempFile, 'r');
-
-        $stream = new class ($resource) extends Stream {
-            public function isWritable(): bool
-            {
-                return true;
-            }
-        };
-
-        try {
-            $this->expectException(\RuntimeException::class);
-            $this->expectExceptionMessage('Error writing to stream: fwrite():');
-
-            $stream->write('data');
-        } finally {
-            fclose($resource);
-            unlink($tempFile);
-        }
-    }
-
-    public function testGetContents(): void
-    {
-        $stream = Stream::create('Philharmony');
-
-        $stream->read(4);
-
-        $this->assertSame('harmony', $stream->getContents());
-    }
-
-    public function testGetContentsThrowsOnFailure(): void
-    {
-        $resource = fopen('php://memory', 'r+');
-        $stream = new class ($resource) extends Stream {
-            public function isReadable(): bool
-            {
-                return true;
-            }
-        };
-
+        $stream = new $streamClass($resource);
         fclose($resource);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Error reading from stream');
+        $this->expectExceptionMessage($message);
 
-        $stream->getContents();
+        $operation($stream);
     }
 
-    public function testGetContentsThrowsWhenNotReadable(): void
+    /**
+     * @return array<string, array{streamClass: string, operation: callable, message: string}>
+     */
+    public static function systemErrorOperations(): array
     {
-        $tempFile = tempnam(sys_get_temp_dir(), 'phil_write');
-        $resource = fopen($tempFile, 'w');
-        $stream = Stream::create($resource);
+        return [
+            'write' => [
+                'streamClass' => ForceWritableStream::class,
+                'operation' => fn (Stream $stream): int => $stream->write('data'),
+                'message' => 'Error writing to stream',
+            ],
+            'read' => [
+                'streamClass' => ForceReadableStream::class,
+                'operation' => fn (Stream $stream): string => $stream->read(1),
+                'message' => 'Error reading from stream',
+            ],
+            'getContents' => [
+                'streamClass' => ForceReadableStream::class,
+                'operation' => fn (Stream $stream): string => $stream->getContents(),
+                'message' => 'Error reading from stream',
+            ],
+            'seek' => [
+                'streamClass' => Stream::class,
+                'operation' => fn (Stream $stream) => $stream->seek(0),
+                'message' => 'Error seeking in stream',
+            ],
+            'tell' => [
+                'streamClass' => Stream::class,
+                'operation' => fn (Stream $stream): int => $stream->tell(),
+                'message' => 'Error getting stream position',
+            ],
+        ];
+    }
 
-        try {
-            $this->expectException(\RuntimeException::class);
-            $this->expectExceptionMessage('Stream is not readable');
-            $stream->getContents();
-        } finally {
-            fclose($resource);
-            unlink($tempFile);
+    private static function initTempFile(): void
+    {
+        if (!isset(self::$tempFile)) {
+            self::$tempFile = tempnam(sys_get_temp_dir(), 'Philharmony');
         }
-    }
-
-    public function testGetMetadataOnDetached(): void
-    {
-        $stream = Stream::create('Philharmony');
-        $stream->detach();
-        $this->assertSame([], $stream->getMetadata());
-        $this->assertNull($stream->getMetadata('uri'));
-    }
-
-    public function testGetMetadataReturnsAllAndSpecificKeys(): void
-    {
-        $resource = fopen('php://memory', 'r+');
-        $stream = Stream::create($resource);
-
-        $this->assertIsArray($stream->getMetadata());
-        $this->assertSame('php://memory', $stream->getMetadata('uri'));
-
-        $this->assertSame('PHP', $stream->getMetadata('wrapper_type'));
-
-        $this->assertNull($stream->getMetadata('non_existent_key'));
-
-        $stream->close();
-    }
-
-    public function testEof(): void
-    {
-        $stream = Stream::create('a');
-        $this->assertFalse($stream->eof());
-        $stream->read(1);
-        $stream->read(1);
-        $this->assertTrue($stream->eof());
-
-        $stream->detach();
-        $this->assertTrue($stream->eof());
-    }
-
-    public function testCloseClosesStream(): void
-    {
-        $resource = fopen('php://memory', 'r+');
-        $stream = Stream::create($resource);
-
-        $stream->close();
-
-        $this->assertNull($stream->detach());
-    }
-
-    public function testStreamStateConsistency(): void
-    {
-        $stream = Stream::create('abcdef');
-
-        $this->assertSame(0, $stream->tell());
-        $this->assertFalse($stream->eof());
-
-        $this->assertSame('ab', $stream->read(2));
-        $this->assertSame(2, $stream->tell());
-
-        $this->assertSame('cd', $stream->read(2));
-        $this->assertSame(4, $stream->tell());
-
-        $this->assertSame('ef', $stream->getContents());
-        $this->assertTrue($stream->eof());
-
-        $stream->rewind();
-
-        $this->assertSame(0, $stream->tell());
-        $this->assertSame('abcdef', $stream->getContents());
-    }
-
-    public function testDetachReturnsNullIfAlreadyDetached(): void
-    {
-        $resource = fopen('php://memory', 'r+');
-        $stream = Stream::create($resource);
-
-        $this->assertSame($resource, $stream->detach());
-        $this->assertNull($stream->detach());
-
-        if (\is_resource($resource)) {
-            fclose($resource);
-        }
-    }
-
-    public function testAppendModePointerBehaviour(): void
-    {
-        $resource = fopen('php://memory', 'a+');
-        fwrite($resource, 'abc');
-        $stream = Stream::create($resource);
-        $stream->seek(1);
-        $this->assertSame(1, $stream->tell());
-        $stream->write('X');
-        $stream->rewind();
-        $this->assertSame('abcX', $stream->getContents());
     }
 }
