@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Philharmony\Http\Message\Enum\Tests;
+namespace Philharmony\Http\Message\Tests\Enum;
 
 use Philharmony\Http\Message\Enum\UploadError;
 use PHPUnit\Framework\Attributes\DataProvider;
