@@ -10,6 +10,7 @@ class Stream implements StreamInterface
 {
     /** @var resource|null */
     private $stream;
+    /** @var int|null */
     private ?int $size = null;
     private bool $seekable = false;
     private bool $readable = false;
@@ -55,7 +56,7 @@ class Stream implements StreamInterface
         if (\is_string($body)) {
             $resource = static::openMemoryResource();
             if ($resource === false) {
-                throw new \RuntimeException('Failed to open php://memory');
+                throw new \RuntimeException('Failed to open php://temp');
             }
 
             if ($body !== '') {
@@ -71,6 +72,27 @@ class Stream implements StreamInterface
         }
 
         return new self($body);
+    }
+
+    public static function createFromFile(string $fileName, string $mode = 'r'): StreamInterface
+    {
+        if ($fileName === '') {
+            throw new \InvalidArgumentException('File name cannot be empty');
+        }
+
+        if ($mode === '') {
+            throw new \InvalidArgumentException('Mode cannot be empty');
+        }
+
+        $resource = static::openFileResource($fileName, $mode);
+        if ($resource === false) {
+            $lastError = error_get_last();
+            $errorMessage = \is_array($lastError) ? $lastError['message'] : 'Unknown error message';
+
+            throw new \RuntimeException(\sprintf('The file "%s" cannot be opened: %s', $fileName, $errorMessage));
+        }
+
+        return self::create($resource);
     }
 
     public function __toString(): string
@@ -129,9 +151,10 @@ class Stream implements StreamInterface
             return null;
         }
 
-        $stats = fstat($this->stream);
+        $stats = $this->getStreamStats();
         if (\is_array($stats) && isset($stats['size'])) {
-            $this->size = $stats['size'];
+            $this->size = (int)$stats['size'];
+
             return $this->size;
         }
 
@@ -278,7 +301,49 @@ class Stream implements StreamInterface
      */
     protected static function openMemoryResource(): mixed
     {
-        return fopen('php://memory', 'r+');
+        return self::openResource('php://temp', 'r+');
+    }
+
+    /**
+     * @return resource|false
+     */
+    protected static function openFileResource(string $fileName, string $mode): mixed
+    {
+        return self::openResource($fileName, $mode);
+    }
+
+    /**
+     * @return resource|false
+     */
+    private static function openResource(string $target, string $mode): mixed
+    {
+        return fopen($target, $mode);
+    }
+
+    /**
+     * @return array{
+     *     dev: int,
+     *     ino: int,
+     *     mode: int,
+     *     nlink: int,
+     *     uid: int,
+     *     gid: int,
+     *     rdev: int,
+     *     size: int,
+     *     atime: int,
+     *     mtime: int,
+     *     ctime: int,
+     *     blksize: int|false,
+     *     blocks: int|false
+     * }|false
+     */
+    protected function getStreamStats(): array|false
+    {
+        if (!\is_resource($this->stream)) {
+            return false;
+        }
+
+        return fstat($this->stream);
     }
 
     private static function isReadableMode(string $mode): bool
