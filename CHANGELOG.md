@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
+## [1.3.0] - 2026-03-19
+
+### Added
+-  `Stream::createFromFile()` method for creating streams directly from file paths.
+- **Test stub streams** for enhanced test coverage:
+  - `BrokenStatsStream` — simulates stream metadata failures.
+  - `FileOpenFailureStream` — emulates file opening errors.
+  - `ForceReadableStream` — ensures stream is readable regardless of underlying resource.
+  - `ForceSeekableStream` — forces seekable behaviour for testing.
+  - `ForceWritableStream` — guarantees writable state for test scenarios.
+  - `MemoryOpenFailureStream` — mimics memory stream creation failures.
+
+### Changed
+- Updated namespace for `UploadErrorTest`.
+- Refactored `Stream` test suite.
+
+### Tests
+- Added tests for `Stream::createFromFile()`.
+- Integrated stub streams into `StreamTest`.
+
+---
+
 ## [1.2.0] - 2026-03-15
 
 ### Added

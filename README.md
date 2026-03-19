@@ -173,6 +173,31 @@ $streamFromResource = Stream::create($resource);
 $newStream = Stream::create($streamFromResource);
 ```
 
+### Direct File Creation
+
+Use `Stream::createFromFile()` to create a stream directly from a file path. This method handles file opening and error management automatically:
+
+```php
+// Create stream directly from file path
+$stream = Stream::createFromFile('document.pdf');
+
+// You can also specify the file mode
+$stream = Stream::createFromFile('log.txt', 'a+'); // append mode
+
+// Handle errors gracefully
+try {
+    $stream = Stream::createFromFile('/path/to/nonexistent.file');
+} catch (\RuntimeException $e) {
+    echo 'Could not create stream: ' . $e->getMessage();
+}
+```
+
+**Key benefits:**
+* **Simplified creation** — eliminates the need to manually call `fopen()`; the method handles file opening internally.
+* **Explicit error handling** — throws `InvalidArgumentException` for empty file names or modes, and `RuntimeException` with detailed error messages if the file cannot be opened (e.g., due to permission issues or non‑existent paths).
+* **Consistent interface** — returns a `StreamInterface` instance, maintaining compatibility with other `Stream` creation methods like `create()`.
+* **Input validation** — performs basic validation of required parameters (`$fileName` and `$mode` must not be empty) before attempting file operations.
+
 ### Safe Operations
 
 Unlike raw PHP functions, `Stream` ensures that system errors are handled gracefully:
