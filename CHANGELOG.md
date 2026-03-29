@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
+## [1.4.0] - 2026-03-29
+
+### Added
+- Improved error handling in `UploadedFile::getStream()` with detailed error messages from `error_get_last()`
+- Support for `UploadedFileFullPathInterface`
+
+### Changed
+- `UploadedFile::__construct()` now throws `InvalidArgumentException` instead of `RuntimeException` for invalid upload error status
+- Suppressed warnings in `Stream::openResource()` using `@` operator for safer resource handling
+- Standardized README references (`.yml` → `.yaml`) across all packages
+
+### Fixed
+- Improved reliability of file handling when opening streams fails
+- Updated tests to reflect new exception behavior
+
+---
 ## [1.3.0] - 2026-03-19
 
 ### Added
@@ -117,6 +133,7 @@ This package provides a high-performance, strictly typed implementation of **PSR
 composer require philharmony/http-message
 ```
 
+[1.4.0]: https://github.com/philharmonytech/http-message/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/philharmonytech/http-message/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/philharmonytech/http-message/compare/v1.0.1...v1.2.0
 [1.0.1]: https://github.com/philharmonytech/http-message/compare/v1.0.0...v1.0.1
