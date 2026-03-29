@@ -1,8 +1,8 @@
 # philharmony/http-message
 
-[![Validate](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=validate)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
-[![Analysis](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=static-analysis)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
-[![Test](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=tests)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yml)
+[![Validate](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=validate)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml)
+[![Analysis](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=static-analysis)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml)
+[![Test](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml/badge.svg?job=tests)](https://github.com/philharmonytech/http-message/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/github/philharmonytech/http-message/graph/badge.svg?token=JVGM1RRACK)](https://codecov.io/github/philharmonytech/http-message)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%20to%208.4-8892BF.svg)](https://www.php.net/supported-versions.php)
 [![Latest Stable Version](https://img.shields.io/github/v/release/philharmonytech/http-message?label=stable)](https://github.com/philharmonytech/http-message/releases)
