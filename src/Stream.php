@@ -317,7 +317,7 @@ class Stream implements StreamInterface
      */
     private static function openResource(string $target, string $mode): mixed
     {
-        return fopen($target, $mode);
+        return @fopen($target, $mode);
     }
 
     /**

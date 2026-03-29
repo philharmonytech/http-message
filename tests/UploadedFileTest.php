@@ -70,7 +70,7 @@ class UploadedFileTest extends TestCase
 
     public function testCreateThrowsExceptionWhenInvalidUploadErrorProvided(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid upload error status "999"');
 
         UploadedFile::create('php://temp', null, 999);

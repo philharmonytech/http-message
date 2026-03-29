@@ -6,10 +6,11 @@ namespace Philharmony\Http\Message;
 
 use Philharmony\Http\Enum\ContentType;
 use Philharmony\Http\Message\Enum\UploadError;
+use Philharmony\Http\PsrExtension\UploadedFileFullPathInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UploadedFileInterface;
 
-class UploadedFile implements UploadedFileInterface
+class UploadedFile implements UploadedFileInterface, UploadedFileFullPathInterface
 {
     private ?string $file = null;
     private ?StreamInterface $stream = null;
@@ -31,7 +32,7 @@ class UploadedFile implements UploadedFileInterface
         $uploadError = UploadError::tryFrom($errorStatus);
 
         if (!$uploadError instanceof UploadError) {
-            throw new \RuntimeException(
+            throw new \InvalidArgumentException(
                 \sprintf('Invalid upload error status "%d"', $errorStatus)
             );
         }
@@ -81,8 +82,11 @@ class UploadedFile implements UploadedFileInterface
 
         $resource = @fopen((string)$this->file, 'rb');
         if ($resource === false) {
+            $lastError = error_get_last();
+            $message = $lastError['message'] ?? 'Unknown error';
+
             throw new \RuntimeException(
-                \sprintf('Unable to open file "%s"', $this->file)
+                \sprintf('Unable to open file "%s": %s', $this->file, $message)
             );
         }
 
